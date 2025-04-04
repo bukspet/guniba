@@ -3,10 +3,9 @@ const CartService = require("../services/CartService");
 class CartController {
   async addToCart(req, res) {
     try {
-      const { productId, quantity } = req.body;
-      const userId = req.user.id; // Assuming user is authenticated
-
-      const cart = await CartService.addToCart(userId, productId, quantity);
+      const { variantId, quantity } = req.body;
+      const userId = req.user.id;
+      const cart = await CartService.addToCart(userId, variantId, quantity);
       res.status(200).json({ success: true, cart });
     } catch (error) {
       res.status(400).json({ success: false, message: error.message });
@@ -15,10 +14,9 @@ class CartController {
 
   async removeFromCart(req, res) {
     try {
-      const { productId } = req.params;
+      const { variantId } = req.params;
       const userId = req.user.id;
-
-      const cart = await CartService.removeFromCart(userId, productId);
+      const cart = await CartService.removeFromCart(userId, variantId);
       res.status(200).json({ success: true, cart });
     } catch (error) {
       res.status(400).json({ success: false, message: error.message });
@@ -39,7 +37,6 @@ class CartController {
     try {
       const { productId } = req.body;
       const userId = req.user.id;
-
       const wishlist = await CartService.addToWishlist(userId, productId);
       res.status(200).json({ success: true, wishlist });
     } catch (error) {
@@ -51,7 +48,6 @@ class CartController {
     try {
       const { productId } = req.params;
       const userId = req.user.id;
-
       const wishlist = await CartService.removeFromWishlist(userId, productId);
       res.status(200).json({ success: true, wishlist });
     } catch (error) {

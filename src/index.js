@@ -68,12 +68,9 @@ app.use("/api/mlm", mlmRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api", cartRoutes);
-app.use("/api/notification", notificationRoutes);
-app.use("/api/order", orderRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/wallet", walletRoutes);
-
 app.use("/api/reviews", reviewRoutes);
 
 const PORT = process.env.PORT || 5000;

@@ -1,4 +1,4 @@
-const { Product, Review } = require("../models/product");
+const { Product, Review } = require("../models/Product");
 
 const ReviewService = {
   // Create a review

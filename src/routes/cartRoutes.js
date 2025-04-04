@@ -1,12 +1,12 @@
 const express = require("express");
 const CartController = require("../controllers/CartController");
-const authMiddleware = require("../middlewares/authMiddleware"); // Ensure user is authenticated
+const authMiddleware = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
 router.post("/cart", authMiddleware, CartController.addToCart);
 router.delete(
-  "/cart/:productId",
+  "/cart/:variantId",
   authMiddleware,
   CartController.removeFromCart
 );

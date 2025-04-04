@@ -27,7 +27,9 @@ router.put("/variants/:id", productController.updateVariant);
 router.delete("/variants/:id", productController.deleteVariant);
 
 // 🟢 Get Product with Variants
+router.get("/variants", productController.getAllVariants);
 router.get("/:id", productController.getProductWithVariants);
+router.get("/", productController.getAllProductsWithVariants);
 
 // 🟢 Get Specific Variant
 router.post("/variants/find", productController.getVariant);

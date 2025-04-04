@@ -1,4 +1,4 @@
-const { Product, Variant, VariantType } = require("../models/product");
+const { Product, Variant, VariantType } = require("../models/Product");
 const slugify = require("slugify");
 // 🟢 Create a new product
 async function createProduct(data) {
@@ -136,44 +136,169 @@ const createVariants = async (productId, variantsData) => {
 
 // 🟢 Get product with variants
 const getProductWithVariants = async (productId) => {
-  return await Product.findById(productId)
-    .populate("variantTypes")
-    .populate({
-      path: "variants",
-      populate: {
-        path: "combinations.typeId",
-        select: "name",
-      },
-    })
-    .populate({
-      path: "reviews",
-      populate: [
-        {
-          path: "userId",
-          select: "fullName avatar",
+  try {
+    const product = await Product.findById(productId)
+      .populate("variantTypes")
+      .populate({
+        path: "variants",
+        populate: {
+          path: "combinations.typeId",
+          select: "name",
         },
-        {
-          path: "variantId",
-          select: "combinations",
-          populate: {
-            path: "combinations.typeId",
-            select: "name",
+      })
+      .populate({
+        path: "reviews",
+        populate: [
+          {
+            path: "userId",
+            select: "fullName avatar",
           },
+          {
+            path: "variantId",
+            select: "combinations",
+            populate: {
+              path: "combinations.typeId",
+              select: "name",
+            },
+          },
+        ],
+      })
+      .lean();
+
+    if (!product) {
+      return {
+        success: false,
+        message: "Product not found",
+        data: null,
+      };
+    }
+
+    // Transform variants to include subnames array
+    product.variants = product.variants.map((variant) => ({
+      ...variant,
+      subnames: variant.combinations.map((combo) => combo.subname),
+    }));
+
+    // Transform reviews to include user details & variant subnames
+    product.reviews = product.reviews.map((review) => ({
+      ...review,
+      user: {
+        fullName: review.userId?.fullName || "Anonymous",
+        avatar: review.userId?.avatar || null,
+      },
+      variantSubnames: review.variantId
+        ? review.variantId.combinations.map((combo) => combo.subname)
+        : [],
+    }));
+
+    return {
+      success: true,
+      message: "Product fetched successfully",
+      data: product,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Error fetching product: ${error.message}`,
+      data: null,
+    };
+  }
+};
+
+const getAllProductsWithVariants = async (
+  filters = {},
+  search = "",
+  priceFilter = {},
+  ratingFilter = {},
+  sort = {}
+) => {
+  try {
+    const searchRegex = search ? new RegExp(search, "i") : null;
+    console.log(
+      new Date(),
+      "Service: Fetching products with search:",
+      search,
+      "filters:",
+      filters
+    );
+    const searchFilter = searchRegex
+      ? {
+          $or: [
+            { name: searchRegex },
+            { category: searchRegex },
+            { brand: searchRegex },
+            { tags: searchRegex },
+          ],
+        }
+      : {};
+
+    let priceQuery = {};
+
+    if (priceFilter.under) {
+      priceQuery.price = { $lte: priceFilter.under };
+    } else if (priceFilter.above) {
+      priceQuery.price = { $gte: priceFilter.above };
+    } else if (priceFilter.between) {
+      priceQuery.price = {
+        $gte: priceFilter.between[0],
+        $lte: priceFilter.between[1],
+      };
+    }
+
+    let ratingQuery = {};
+
+    if (ratingFilter.above) {
+      ratingQuery.rating = { $gte: ratingFilter.above };
+    }
+
+    const query = {
+      ...filters,
+      ...searchFilter,
+      ...priceQuery,
+      ...ratingQuery,
+    };
+
+    let mongoSort = {};
+    if (sort.price) {
+      mongoSort.price = sort.price === "desc" ? -1 : 1;
+    }
+
+    const products = await Product.find(query)
+      .populate("variantTypes")
+      .populate({
+        path: "variants",
+        populate: {
+          path: "combinations.typeId",
+          select: "name",
         },
-      ],
-    })
-    .lean()
-    .then((product) => {
-      if (!product) return null;
+      })
+      .populate({
+        path: "reviews",
+        populate: [
+          {
+            path: "userId",
+            select: "fullName avatar",
+          },
+          {
+            path: "variantId",
+            select: "combinations",
+            populate: {
+              path: "combinations.typeId",
+              select: "name",
+            },
+          },
+        ],
+      })
+      .sort(mongoSort)
+      .lean();
 
-      // Transform variants to include subnames array
-      product.variants = product.variants.map((variant) => ({
+    const transformedProducts = products.map((product) => ({
+      ...product,
+      variants: product.variants.map((variant) => ({
         ...variant,
-        subnames: variant.combinations.map((combo) => combo.subname), // Extract subnames
-      }));
-
-      // Transform reviews to include user details & variant subnames
-      product.reviews = product.reviews.map((review) => ({
+        subnames: variant.combinations.map((combo) => combo.subname),
+      })),
+      reviews: product.reviews.map((review) => ({
         ...review,
         user: {
           fullName: review.userId?.fullName || "Anonymous",
@@ -181,13 +306,33 @@ const getProductWithVariants = async (productId) => {
         },
         variantSubnames: review.variantId
           ? review.variantId.combinations.map((combo) => combo.subname)
-          : [], // Extract subnames if variant exists
-      }));
+          : [],
+      })),
+    }));
 
-      return product;
-    });
+    return {
+      success: true,
+      message: "Products fetched successfully",
+      data: transformedProducts,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Error fetching products: ${error.message}`,
+      data: [],
+    };
+  }
 };
 
+const getAllVariants = async () => {
+  try {
+    const variants = await Variant.find();
+    return variants;
+  } catch (error) {
+    console.error("Error fetching variants:", error);
+    throw new Error("Failed to fetch variants");
+  }
+};
 // 🟢 Find a specific variant based on selected options
 const findVariant = async (productId, selectedVariants) => {
   return await Variant.findOne({
@@ -228,9 +373,11 @@ module.exports = {
   createVariants,
   getProductWithVariants,
   findVariant,
+  getAllVariants,
   updateProduct,
   deleteProduct,
   updateVariant,
   deleteVariant,
+  getAllProductsWithVariants,
   deleteVariantType,
 };

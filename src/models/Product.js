@@ -38,9 +38,12 @@ const productSchema = new mongoose.Schema(
     tags: [{ type: String, index: true }],
     price: { type: Number, required: true, min: 0 },
     promoPrice: { type: Number, min: 0, default: null },
+    shippingFee: { type: Number, min: 0 },
     images: [{ type: String, required: true }],
     description: { type: String, required: true, index: "text" },
-    features: { type: [String], default: [] },
+    keyFeatures: { type: String, default: null },
+
+    productDetails: { type: String, default: null },
     rating: { type: Number, default: 0, min: 0, max: 5 },
     quantitySold: { type: Number, default: 0, min: 0 },
     variantTypes: [
@@ -59,9 +62,8 @@ const productSchema = new mongoose.Schema(
 
 const Product = mongoose.model("Product", productSchema);
 
-// 🟢 Variant Type Schema
 const variantTypeSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true, trim: true },
+  name: { type: String, required: true, trim: true },
   values: [
     {
       subname: { type: String, required: true },
@@ -70,7 +72,11 @@ const variantTypeSchema = new mongoose.Schema({
   ],
 });
 
+variantTypeSchema.index({ name: 1 }, { unique: false });
+
 const VariantType = mongoose.model("VariantType", variantTypeSchema);
+
+module.exports = VariantType;
 
 // 🟢 Variant Schema
 const variantSchema = new mongoose.Schema(
@@ -95,6 +101,7 @@ const variantSchema = new mongoose.Schema(
     ],
     stock: { type: Number, required: true, min: 0, default: 0 },
     price: { type: Number, required: true, min: 0 },
+    shippingCost: { type: Number, min: 0 },
     promoPrice: { type: Number, min: 0, default: null },
   },
   { timestamps: true }

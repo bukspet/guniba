@@ -44,6 +44,53 @@ const getProductWithVariants = async (req, res) => {
   }
 };
 
+const getAllProductsWithVariants = async (req, res) => {
+  try {
+    const { search, ...filters } = req.query;
+    console.log(
+      new Date(),
+      "Controller: Received request with search:",
+      search
+    );
+    const priceFilter = {};
+    if (req.query.under) {
+      priceFilter.under = parseInt(req.query.under);
+    } else if (req.query.above) {
+      priceFilter.above = parseInt(req.query.above);
+    } else if (req.query.between) {
+      const betweenValues = req.query.between.split(",").map(Number);
+      if (betweenValues.length === 2) {
+        priceFilter.between = betweenValues;
+      }
+    }
+
+    const ratingFilter = {};
+    if (req.query.ratingAbove) {
+      ratingFilter.above = parseInt(req.query.ratingAbove);
+    }
+
+    const sort = {};
+    if (req.query.sortPrice) {
+      sort.price = req.query.sortPrice;
+    }
+
+    const response = await productService.getAllProductsWithVariants(
+      filters,
+      search,
+      priceFilter,
+      ratingFilter,
+      sort
+    );
+    res.status(response.success ? 200 : 500).json(response);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: `Server error: ${error.message}`,
+      data: [],
+    });
+  }
+};
+
 // ✅ Get variant by selected options
 const getVariant = async (req, res) => {
   try {
@@ -71,7 +118,18 @@ const getVariant = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-}; // ✅ Update a Product
+};
+
+const getAllVariants = async (req, res) => {
+  try {
+    const variants = await productService.getAllVariants();
+    res.status(200).json({ success: true, data: variants });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ✅ Update a Product
 const updateProduct = async (req, res) => {
   try {
     const updatedProduct = await productService.updateProduct(
@@ -132,7 +190,9 @@ module.exports = {
   createVariantType,
   createVariants,
   getProductWithVariants,
+  getAllProductsWithVariants,
   getVariant,
+  getAllVariants,
   updateProduct,
   deleteProduct,
   updateVariant,

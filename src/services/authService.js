@@ -100,6 +100,7 @@ class AuthService {
           id: user._id,
           fullName: user.fullName,
           email: user.email,
+          role: user.role,
           referralCode: user.referralCode,
           token,
         },

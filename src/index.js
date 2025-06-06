@@ -3,6 +3,7 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const http = require("http");
+const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db.js");
 
 const authRoutes = require("./routes/authRoutes.js");
@@ -17,17 +18,27 @@ const reviewRoutes = require("./routes/reviewRoutes.js");
 
 dotenv.config();
 
-// Connect to MongoDB
 connectDB();
-
 const app = express();
+app.use(cookieParser());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" },
 });
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "https://guniba-client.vercel.app",
+];
+
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true, // Allow cookies and auth headers
+  })
+);
 app.use(express.json());
 
 // Store active users

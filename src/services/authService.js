@@ -12,8 +12,27 @@ const sendRealTimeNotification = (userId, notification) => {
 const NotificationService = require("../services/notificationService.js")(
   sendRealTimeNotification
 );
-const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+// const generateToken = (userId) => {
+//   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+// };
+
+const generateTokens = (userId, role, type) => {
+  const accessToken = jwt.sign({ id: userId, role }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+
+  let refreshToken = null;
+  if (type === "both" || type === "refresh") {
+    refreshToken = jwt.sign(
+      { id: userId, role },
+      process.env.JWT_REFRESH_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    );
+  }
+
+  return { accessToken, refreshToken };
 };
 class AuthService {
   static async signup({ fullName, email, password, referralCode }) {
@@ -53,12 +72,23 @@ class AuthService {
         `Hello ${newUser.fullName}, welcome to Guniba!`
       ).catch((err) => console.error("Notification Error:", err.message));
 
-      const token = generateToken(newUser._id);
+      // const token = generateToken(newUser._id);
+
+      const { accessToken, refreshToken } = generateTokens(
+        newUser._id,
+        newUser.role,
+        "both"
+      );
 
       return {
         success: true,
         message: "Signup successful",
-        data: { id: newUser._id, email: newUser.email, token },
+        data: {
+          id: newUser._id,
+          email: newUser.email,
+          accessToken,
+          refreshToken,
+        },
       };
     } catch (error) {
       return {
@@ -92,7 +122,11 @@ class AuthService {
         };
       }
 
-      const token = generateToken(user._id);
+      const { accessToken, refreshToken } = generateTokens(
+        user._id,
+        user.role,
+        "both"
+      );
       return {
         success: true,
         message: "Signin successful",
@@ -102,7 +136,8 @@ class AuthService {
           email: user.email,
           role: user.role,
           referralCode: user.referralCode,
-          token,
+          accessToken,
+          refreshToken,
         },
       };
     } catch (error) {
@@ -113,6 +148,71 @@ class AuthService {
         data: null,
       };
     }
+  }
+
+  static async refreshAccessTokenService(refreshToken) {
+    return new Promise((resolve, reject) => {
+      if (!refreshToken) {
+        return reject(new Error("No refresh token provided"));
+      }
+
+      const cleanedToken = refreshToken.trim();
+
+      jwt.verify(
+        cleanedToken,
+        process.env.JWT_REFRESH_SECRET,
+        async (err, decoded) => {
+          if (err) {
+            console.error("❌ JWT verification error:", err.message);
+
+            if (err.name === "TokenExpiredError") {
+              return reject(new Error("Refresh token expired"));
+            }
+
+            return reject(new Error("Invalid or malformed refresh token"));
+          }
+
+          if (!decoded || !decoded.id || !decoded.role) {
+            return reject(new Error("Invalid refresh token payload"));
+          }
+
+          const isTokenExpired = Date.now() / 1000 > decoded.exp;
+          if (isTokenExpired) {
+            return reject(new Error("Refresh token expired"));
+          }
+
+          try {
+            const user = await User.findById(decoded.id);
+            if (!user) {
+              return reject(new Error("User not found"));
+            }
+
+            const newAccessToken = generateTokens(
+              user._id,
+              user.role,
+              "access"
+            );
+            console.log(newAccessToken.accessToken, "new");
+            resolve(newAccessToken.accessToken);
+          } catch (err) {
+            reject(new Error("Error fetching user or generating new token"));
+          }
+        }
+      );
+    });
+  }
+
+  static async logoutService(req) {
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (!refreshToken) {
+      throw new Error("No refresh token provided");
+    }
+
+    return {
+      success: true,
+      message: "Logout successful",
+    };
   }
 
   static async requestPasswordReset(email) {

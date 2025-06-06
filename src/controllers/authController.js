@@ -29,13 +29,93 @@ class AuthController {
 
       const result = await AuthService.signin({ email, password });
 
-      return res.status(result.success ? 200 : 400).json(result);
+      if (!result.success) {
+        return res.status(401).json(result);
+      }
+      const isSecure =
+        req.secure || req.headers["x-forwarded-proto"] === "https";
+
+      res.cookie("refreshToken", result.data.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production" ? isSecure : false,
+        sameSite: "None",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: "/",
+      });
+      // return res.status(result.success ? 200 : 400).json(result);
+
+      return res.status(200).json({
+        success: true,
+        message: "Sign in successful",
+        data: result.data,
+      });
     } catch (error) {
       console.error("Signin Error:", error);
       return res.status(500).json({
         success: false,
         message: "An internal server error occurred",
         data: null,
+      });
+    }
+  }
+
+  static async refreshTokenController(req, res) {
+    try {
+      const refreshToken = req.cookies?.refreshToken;
+
+      if (!refreshToken) {
+        return res.status(400).json({
+          success: false,
+          message: "No refresh token provided in cookies",
+        });
+      }
+
+      const newAccessToken = await AuthService.refreshAccessTokenService(
+        refreshToken
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Token refreshed successfully",
+        accessToken: newAccessToken,
+      });
+    } catch (error) {
+      console.error("Error refreshing token:", error.message);
+      return res.status(403).json({
+        success: false,
+        message: error.message || "Failed to refresh token",
+      });
+    }
+  }
+
+  static async logoutUser(req, res) {
+    try {
+      console.log("Cookies on logout:", req.cookies);
+
+      if (!req.cookies.refreshToken) {
+        throw new Error("No refresh token provided");
+      }
+
+      await AuthService.logoutService(req); // your custom logout logic
+
+      const isSecure =
+        req.secure || req.headers["x-forwarded-proto"] === "https";
+
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production" ? isSecure : false,
+        sameSite: "strict",
+        path: "/", // MUST match how it was set
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Logout successful",
+      });
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message || "Logout failed",
       });
     }
   }

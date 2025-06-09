@@ -1,23 +1,17 @@
+// routes/cartRoutes.ts
 const express = require("express");
-const CartController = require("../controllers/CartController");
+
+const CartController = require("../controllers/cartController");
+
 const authMiddleware = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
-router.post("/cart", authMiddleware, CartController.addToCart);
-router.delete(
-  "/cart/:variantId",
-  authMiddleware,
-  CartController.removeFromCart
-);
-router.get("/cart", authMiddleware, CartController.getUserCart);
+router.use(authMiddleware);
 
-router.post("/wishlist", authMiddleware, CartController.addToWishlist);
-router.delete(
-  "/wishlist/:productId",
-  authMiddleware,
-  CartController.removeFromWishlist
-);
-router.get("/wishlist", authMiddleware, CartController.getUserWishlist);
+router.get("/", CartController.getCart);
+router.post("/", CartController.addToCart);
+router.patch("/:variantId", CartController.updateQuantity);
+router.delete("/:variantId", CartController.removeItem);
 
 module.exports = router;

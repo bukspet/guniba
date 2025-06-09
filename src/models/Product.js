@@ -44,6 +44,7 @@ const productSchema = new mongoose.Schema(
     keyFeatures: { type: String, default: null },
 
     productDetails: { type: String, default: null },
+    keyInformation: { type: String, default: null },
     rating: { type: Number, default: 0, min: 0, max: 5 },
     quantitySold: { type: Number, default: 0, min: 0 },
     variantTypes: [
@@ -56,6 +57,7 @@ const productSchema = new mongoose.Schema(
       default: "active",
     },
     reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
+    temporal: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
@@ -70,6 +72,7 @@ const variantTypeSchema = new mongoose.Schema({
       image: { type: String },
     },
   ],
+  used: { type: Boolean, default: false },
 });
 
 variantTypeSchema.index({ name: 1 }, { unique: false });
@@ -103,6 +106,7 @@ const variantSchema = new mongoose.Schema(
     price: { type: Number, required: true, min: 0 },
     shippingCost: { type: Number, min: 0 },
     promoPrice: { type: Number, min: 0, default: null },
+    available: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

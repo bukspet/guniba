@@ -40,6 +40,15 @@ async function createProduct(data) {
       throw new Error("Variant types not found");
     }
 
+    // ✅ Mark used variant types as used: true
+    await VariantType.updateMany(
+      { _id: { $in: variantTypes } },
+      { $set: { used: true } }
+    );
+
+    // ✅ Remove unused variant types (used: false)
+    await VariantType.deleteMany({ used: false });
+
     // ✅ Extract values [{ subname, image }]
     let variantValues = variantTypeData.map((vt) =>
       vt.values.map((v) => ({ subname: v.subname, image: v.image || null }))
@@ -50,7 +59,7 @@ async function createProduct(data) {
 
     // ✅ Map variant types for additional details
     const otherDetails = {
-      SKU, // Inherit from product
+      SKU,
       variants: variantTypeData.map((variant) => ({
         typeName: variant.name,
         subnames: variant.values.map((value) => value.subname),
@@ -79,7 +88,7 @@ async function createProduct(data) {
     }
 
     // ✅ Create variant documents
-    let variantDocs = variantCombinations.map((combination) => ({
+    const variantDocs = variantCombinations.map((combination) => ({
       productId: product._id,
       combinations: combination.map((value, index) => ({
         typeId: variantTypeData[index]._id,
@@ -91,11 +100,11 @@ async function createProduct(data) {
       promoPrice,
     }));
 
-    // ✅ Save variants in DB
+    // ✅ Save variants
     const savedVariants = await Variant.insertMany(variantDocs);
     console.log("Saved Variants:", savedVariants);
 
-    // ✅ Update product with variants
+    // ✅ Attach variants to product
     product.variants = savedVariants.map((v) => v._id);
     await product.save();
 
@@ -106,7 +115,7 @@ async function createProduct(data) {
   }
 }
 
-// Helper function to generate combinations
+// Helper f  unction to generate combinations
 function generateCombinations(arrays, prefix = []) {
   if (!arrays.length) return [prefix];
   const [first, ...rest] = arrays;
@@ -203,6 +212,14 @@ const getProductWithVariants = async (productId) => {
       data: null,
     };
   }
+};
+
+const setProductPermanent = async (productId) => {
+  return await Product.findByIdAndUpdate(
+    productId,
+    { temporal: false },
+    { new: true }
+  );
 };
 
 const getAllProductsWithVariants = async (
@@ -380,4 +397,5 @@ module.exports = {
   deleteVariant,
   getAllProductsWithVariants,
   deleteVariantType,
+  setProductPermanent,
 };

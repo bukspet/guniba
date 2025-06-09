@@ -78,7 +78,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/mlm", mlmRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/user", userRoutes);
-app.use("/api", cartRoutes);
+app.use("/api/cart", cartRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/wallet", walletRoutes);

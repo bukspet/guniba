@@ -10,6 +10,23 @@ const createProduct = async (req, res) => {
   }
 };
 
+const setTemporalFalse = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedProduct = await productService.setProductPermanent(id);
+
+    if (!updatedProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Temporal field updated", product: updatedProduct });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // ✅ Create a new variant type
 const createVariantType = async (req, res) => {
   try {
@@ -198,4 +215,5 @@ module.exports = {
   updateVariant,
   deleteVariant,
   deleteVariantType,
+  setTemporalFalse,
 };

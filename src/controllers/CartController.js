@@ -1,69 +1,53 @@
-const CartService = require("../services/CartService");
+const cartService = require("../services/cartService");
 
-class CartController {
-  async addToCart(req, res) {
-    try {
-      const { variantId, quantity } = req.body;
-      const userId = req.user.id;
-      const cart = await CartService.addToCart(userId, variantId, quantity);
-      res.status(200).json({ success: true, cart });
-    } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
-    }
+const getCart = async (req, res) => {
+  try {
+    const cart = await cartService.getCartByUser(req.user.id);
+    res.json(cart);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
+};
 
-  async removeFromCart(req, res) {
-    try {
-      const { variantId } = req.params;
-      const userId = req.user.id;
-      const cart = await CartService.removeFromCart(userId, variantId);
-      res.status(200).json({ success: true, cart });
-    } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
-    }
+const addToCart = async (req, res) => {
+  try {
+    const cart = await cartService.addToCart(req.user.id, req.body);
+    res.status(200).json(cart);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
+};
 
-  async getUserCart(req, res) {
-    try {
-      const userId = req.user.id;
-      const cart = await CartService.getUserCart(userId);
-      res.status(200).json({ success: true, cart });
-    } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
-    }
+const updateQuantity = async (req, res) => {
+  const { variantId } = req.params;
+  const { action } = req.body;
+
+  try {
+    const cart = await cartService.updateQuantity(
+      req.user.id,
+      variantId,
+      action
+    );
+    res.json(cart);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
+};
 
-  async addToWishlist(req, res) {
-    try {
-      const { productId } = req.body;
-      const userId = req.user.id;
-      const wishlist = await CartService.addToWishlist(userId, productId);
-      res.status(200).json({ success: true, wishlist });
-    } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
-    }
+const removeItem = async (req, res) => {
+  const { variantId } = req.params;
+
+  try {
+    const cart = await cartService.removeCartItem(req.user.id, variantId);
+    res.json(cart);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
+};
 
-  async removeFromWishlist(req, res) {
-    try {
-      const { productId } = req.params;
-      const userId = req.user.id;
-      const wishlist = await CartService.removeFromWishlist(userId, productId);
-      res.status(200).json({ success: true, wishlist });
-    } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
-    }
-  }
-
-  async getUserWishlist(req, res) {
-    try {
-      const userId = req.user.id;
-      const wishlist = await CartService.getUserWishlist(userId);
-      res.status(200).json({ success: true, wishlist });
-    } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
-    }
-  }
-}
-
-module.exports = new CartController();
+module.exports = {
+  getCart,
+  addToCart,
+  removeItem,
+  updateQuantity,
+};

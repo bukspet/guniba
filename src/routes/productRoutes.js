@@ -8,6 +8,8 @@ router.post("/create", productController.createProduct);
 // 🟢 Update Product
 router.put("/:id", productController.updateProduct);
 
+router.patch("/:id/set-temporal-false", productController.setTemporalFalse);
+
 // 🟢 Delete Product
 router.delete("/:id", productController.deleteProduct);
 

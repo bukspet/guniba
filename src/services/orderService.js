@@ -35,7 +35,11 @@ class OrderService {
     await order.save();
 
     // Calculate commissions when the order is confirmed
-    await MLMService.calculateCommission(order.userId, order.totalAmount);
+    await MLMService.calculateCommission(
+      order.user,
+      order.totalPrice,
+      order._id
+    );
 
     return order;
   }

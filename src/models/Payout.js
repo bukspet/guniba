@@ -6,6 +6,11 @@ const WithdrawalRequestSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     amount: Number,
     payoutCard: { type: mongoose.Schema.Types.ObjectId, ref: "PayoutCard" },
+    source: {
+      type: String,
+      enum: ["wallet", "commission"],
+      required: true,
+    },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],

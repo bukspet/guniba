@@ -1,41 +1,26 @@
-const WalletService = require("../services/walletService.js");
-const OTPService = require("../services/OTPService");
+const walletService = require("../services/walletService");
 
-class WalletController {
-  static async requestWithdrawal(req, res) {
-    try {
-      const { userId } = req.user;
-      const withdrawal = await WalletService.requestWithdrawal(userId);
-      await OTPService.sendOTP(userId, withdrawal._id);
-      res
-        .status(200)
-        .json({ message: "OTP sent, enter OTP to confirm withdrawal" });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
+exports.getWallet = async (req, res) => {
+  try {
+    const { wallet, transactions } = await walletService.getUserWallet(
+      req.params.userId
+    );
+    res.json({ wallet, transactions });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
+};
 
-  static async confirmWithdrawal(req, res) {
-    try {
-      const { userId } = req.user;
-      const { otp, withdrawalId } = req.body;
-      await OTPService.verifyOTP(userId, withdrawalId, otp);
-      await WalletService.confirmWithdrawal(userId, withdrawalId);
-      res.status(200).json({ message: "Withdrawal processing" });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
+exports.approveTransaction = async (req, res) => {
+  try {
+    const transaction = await walletService.approveWalletTransaction(
+      req.params.transactionId
+    );
+    res.json({
+      message: "Transaction approved and wallet updated",
+      transaction,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  static async approveWithdrawal(req, res) {
-    try {
-      const { withdrawalId } = req.params;
-      await WalletService.approveWithdrawal(withdrawalId);
-      res.status(200).json({ message: "Withdrawal approved and paid" });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-}
-
-module.exports = WalletController;
+};

@@ -47,6 +47,12 @@ const userSchema = new mongoose.Schema(
       ref: "Wallet",
       default: null, // Reference to Wallet model
     },
+
+    level: {
+      type: Number,
+      enum: [1, 2, 3],
+      default: 1,
+    },
     role: {
       type: String,
       enum: ["user", "admin"], // Define role options
@@ -54,6 +60,8 @@ const userSchema = new mongoose.Schema(
     },
     totalSales: { type: Number, default: 0 }, // Tracks user and downline purchases
     commissionEarned: { type: Number, default: 0 },
+    commissionBalance: { type: Number, default: 0 },
+    wallet: { type: Number, default: 0 },
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
   },
 

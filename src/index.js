@@ -13,7 +13,7 @@ const mlmRoutes = require("./routes/mlmRoutes.js");
 const notificationRoutes = require("./routes/notificationRoutes.js");
 const orderRoutes = require("./routes/orderRoutes.js");
 const productRoutes = require("./routes/productRoutes.js");
-const walletRoutes = require("./routes/walletRoutes.js");
+
 const reviewRoutes = require("./routes/reviewRoutes.js");
 
 dotenv.config();
@@ -81,7 +81,6 @@ app.use("/api/user", userRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/user", userRoutes);
-app.use("/api/wallet", walletRoutes);
 app.use("/api/reviews", reviewRoutes);
 
 const PORT = process.env.PORT || 5000;

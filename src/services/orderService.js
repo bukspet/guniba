@@ -1,63 +1,150 @@
-const Order = require("../models/Order.js");
-const MLMService = require("./mlmService.js");
+const Order = require("../models/Order");
+const User = require("../models/User");
 
-class OrderService {
-  async placeOrder(userId, products, totalAmount) {
-    const order = new Order({
-      userId,
-      products,
-      totalAmount,
-      status: "processing",
-    });
+const generateOrderNo = () => {
+  return `GU-${Math.floor(100000000 + Math.random() * 900000000)}`;
+};
 
-    await order.save();
-    await MLMService.calculateCommission(userId, totalAmount);
+exports.createOrder = async (userId, items) => {
+  const totalPrice = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
-    return order;
+  const order = await Order.create({
+    user: userId,
+    items,
+    totalPrice,
+    orderNo: generateOrderNo(),
+  });
+
+  return order;
+};
+exports.updateOrderStatus = async (orderId, status) => {
+  const order = await Order.findById(orderId);
+  if (!order) throw new Error("Order not found");
+
+  order.status = status;
+
+  if (status === "Return") {
+    const user = await User.findById(order.user);
+    user.wallet += order.totalPrice;
+    await user.save();
   }
 
-  async getAllOrders() {
-    return await Order.find().populate("userId", "fullName email");
+  await order.save();
+
+  // Trigger MLM logic after order is marked completed
+  if (status === "Completed") {
+    await MLMService.calculateCommission(order.user, order.totalPrice);
   }
 
-  async getOrderById(orderId) {
-    return await Order.findById(orderId).populate("userId", "fullName email");
+  return order;
+};
+
+exports.confirmOrderReceived = async (orderId) => {
+  return await exports.updateOrderStatus(orderId, "Completed");
+};
+
+exports.getAllOrders = async (filter = {}) => {
+  return await Order.find(filter).populate("user items.variantId");
+};
+
+exports.getAllOrdersForUser = async (userId) => {
+  return await Order.find({ user: userId }).populate("items.variantId");
+};
+
+exports.getUserOrdersSummary = async (userId) => {
+  const orders = await Order.find({ user: userId });
+
+  const summary = {
+    totalOrders: orders.length,
+    totalAmount: 0,
+    completed: {
+      count: 0,
+      amount: 0,
+    },
+    processing: {
+      count: 0,
+      amount: 0,
+    },
+    shipped: {
+      count: 0,
+      amount: 0,
+    },
+  };
+
+  for (const order of orders) {
+    summary.totalAmount += order.totalPrice;
+
+    if (order.status === "Completed") {
+      summary.completed.count++;
+      summary.completed.amount += order.totalPrice;
+    } else if (order.status === "Processing") {
+      summary.processing.count++;
+      summary.processing.amount += order.totalPrice;
+    } else if (order.status === "Shipped") {
+      summary.shipped.count++;
+      summary.shipped.amount += order.totalPrice;
+    }
   }
 
-  async confirmOrder(orderId) {
-    const order = await Order.findById(orderId);
-    if (!order) throw new Error("Order not found");
+  return summary;
+};
+exports.getAdminOrdersSummary = async () => {
+  const orders = await Order.find({});
 
-    if (order.status !== "processing")
-      throw new Error("Order is not in processing state");
+  const summary = {
+    totalOrders: orders.length,
+    totalAmount: 0,
+    completed: {
+      count: 0,
+      amount: 0,
+    },
+    processing: {
+      count: 0,
+      amount: 0,
+    },
+    shipped: {
+      count: 0,
+      amount: 0,
+    },
+    return: {
+      count: 0,
+      amount: 0,
+    },
+  };
 
-    order.status = "completed";
-    await order.save();
+  for (const order of orders) {
+    summary.totalAmount += order.totalPrice;
 
-    // Calculate commissions when the order is confirmed
-    await MLMService.calculateCommission(
-      order.user,
-      order.totalPrice,
-      order._id
-    );
-
-    return order;
+    if (order.status === "Completed") {
+      summary.completed.count++;
+      summary.completed.amount += order.totalPrice;
+    } else if (order.status === "Processing") {
+      summary.processing.count++;
+      summary.processing.amount += order.totalPrice;
+    } else if (order.status === "Shipped") {
+      summary.shipped.count++;
+      summary.shipped.amount += order.totalPrice;
+    } else if (order.status === "Return") {
+      summary.return.count++;
+      summary.return.amount += order.totalPrice;
+    }
   }
-  async cancelOrder(orderId, userId) {
-    const order = await Order.findById(orderId);
-    if (!order) throw new Error("Order not found");
 
-    if (order.status === "completed")
-      throw new Error("Cannot cancel a completed order");
+  return summary;
+};
 
-    if (order.userId.toString() !== userId)
-      throw new Error("Unauthorized to cancel this order");
+exports.getOrderById = async (orderId) => {
+  const order = await Order.findById(orderId)
+    .populate("user", "name email") // Optional: only return selected user fields
+    .populate("items.variantId") // Adjust field names as needed
+    .exec();
 
-    order.status = "canceled";
-    await order.save();
-
-    return order;
+  if (!order) {
+    throw new Error("Order not found");
   }
-}
 
-module.exports = new OrderService();
+  return order;
+};

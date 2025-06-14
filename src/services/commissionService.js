@@ -1,6 +1,6 @@
 const Commission = require("../models/Commission");
 const User = require("../models/User");
-const Wallet = require("../models/Wallet");
+const Wallet = require("../models/WalletTransaction");
 const WithdrawalRequest = require("../models/WithdrawalRequest");
 const PayoutCard = require("../models/PayoutCard");
 
@@ -21,42 +21,33 @@ exports.getUserCommissionSummary = async (userId) => {
 };
 
 exports.withdrawToWallet = async (userId, amount) => {
+  const user = await User.findById(userId);
   const totalCommission = await this.getUserCommissionSummary(userId);
+
   if (amount > totalCommission)
     throw new Error("Insufficient commission balance");
-
-  // Log withdrawal request
-  const withdrawal = await WithdrawalRequest.create({
-    reference: generateReference(),
-    user: userId,
-    amount,
-    source: "commission",
-    status: "approved", // Direct wallet top-up
-  });
-
-  // Add to wallet
-  //   const user = await User.findById(userId);
-  //   user.wallet += amount;
-  //   await user.save();
-
-  let wallet = await Wallet.findOne({ user: userId });
-  if (!wallet) {
-    wallet = await Wallet.create({ user: userId });
-  }
+  user.commissionBalance -= amount;
+  user.wallet += amount;
+  // const withdrawal = await WithdrawalRequest.create({
+  //   reference: generateReference(),
+  //   user: userId,
+  //   amount,
+  //   source: "commission",
+  //   withdrawalType: "wallet",
+  //   status: "pending", // processed later in admin flow
+  // });
 
   await WalletTransaction.create({
     user: userId,
-    wallet: wallet._id,
     transactionId: generateTransactionId(),
-    type: "withdrawal",
+    type: "withdrawal to Wallet",
     amount,
-    status: "pending", // same as withdrawal status
+    status: "approved",
   });
 
   return {
-    message: "Withdrawal to wallet successful",
+    message: "Withdrawal to wallet requested",
     withdrawal,
-    newWalletBalance: user.wallet,
   };
 };
 
@@ -65,17 +56,24 @@ exports.withdrawToBank = async (userId, amount, payoutCardId) => {
   if (amount > totalCommission)
     throw new Error("Insufficient commission balance");
 
-  // Validate payout card
   const card = await PayoutCard.findOne({ _id: payoutCardId, user: userId });
   if (!card) throw new Error("Invalid payout card");
 
-  // Create withdrawal request for admin to approve
   const withdrawal = await WithdrawalRequest.create({
     reference: generateReference(),
     user: userId,
     amount,
     source: "commission",
     payoutCard: payoutCardId,
+    withdrawalType: "bank",
+    status: "pending",
+  });
+
+  await WalletTransaction.create({
+    user: userId,
+    transactionId: generateTransactionId(),
+    type: "withdrawal to Bank",
+    amount,
     status: "pending",
   });
 

@@ -1,44 +1,45 @@
-const cartService = require("../services/cartService");
+const {
+  removeCartItem,
+  addToCart,
+  getCartByUser,
+  updateQuantity,
+} = require("../services/CartService");
 
-const getCart = async (req, res) => {
+const getCartController = async (req, res) => {
   try {
-    const cart = await cartService.getCartByUser(req.user.id);
+    const cart = await getCartByUser(req.user.id);
     res.json(cart);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-const addToCart = async (req, res) => {
+const addToCartController = async (req, res) => {
   try {
-    const cart = await cartService.addToCart(req.user.id, req.body);
+    const cart = await addToCart(req.user.id, req.body);
     res.status(200).json(cart);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-const updateQuantity = async (req, res) => {
+const updateQuantityController = async (req, res) => {
   const { variantId } = req.params;
   const { action } = req.body;
 
   try {
-    const cart = await cartService.updateQuantity(
-      req.user.id,
-      variantId,
-      action
-    );
+    const cart = await updateQuantity(req.user.id, variantId, action);
     res.json(cart);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 };
 
-const removeItem = async (req, res) => {
+const removeItemController = async (req, res) => {
   const { variantId } = req.params;
 
   try {
-    const cart = await cartService.removeCartItem(req.user.id, variantId);
+    const cart = await removeCartItem(req.user.id, variantId);
     res.json(cart);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -46,8 +47,8 @@ const removeItem = async (req, res) => {
 };
 
 module.exports = {
-  getCart,
-  addToCart,
-  removeItem,
-  updateQuantity,
+  getCartController,
+  addToCartController,
+  removeItemController,
+  updateQuantityController,
 };

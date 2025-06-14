@@ -1,5 +1,29 @@
 const mongoose = require("mongoose");
 
+const readyToReviewSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    variantId: { type: mongoose.Schema.Types.ObjectId, ref: "Variant" },
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      required: true,
+    },
+  },
+  { timestamps: true }
+);
+
+const ReadyToReview = mongoose.model("ReadyToReview", readyToReviewSchema);
+
 // 🟢 Review Schema
 const reviewSchema = new mongoose.Schema(
   {
@@ -21,6 +45,11 @@ const reviewSchema = new mongoose.Schema(
     },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, required: true, trim: true },
+    images: [
+      {
+        type: String, // Could be a URL or Cloudinary public_id, etc.
+      },
+    ],
   },
   { timestamps: true }
 );
@@ -113,4 +142,4 @@ const variantSchema = new mongoose.Schema(
 
 const Variant = mongoose.model("Variant", variantSchema);
 
-module.exports = { Product, VariantType, Variant, Review };
+module.exports = { Product, VariantType, Variant, Review, ReadyToReview };

@@ -2,7 +2,25 @@ const User = require("../models/User");
 
 class UserService {
   async getAllUsers() {
-    return await User.find().select("-password"); // Exclude password field
+    const users = await User.find({ role: "user" })
+      .select(
+        "fullName email phone status role level commissionEarned totalSales lastActivity createdAt referredBy"
+      )
+      .lean();
+
+    const results = await Promise.all(
+      users.map(async (user) => {
+        const downlineCount = await User.countDocuments({
+          referredBy: user._id,
+        });
+        return {
+          ...user,
+          directDownlines: downlineCount,
+        };
+      })
+    );
+
+    return results;
   }
 
   async getUserById(userId) {
@@ -10,17 +28,10 @@ class UserService {
   }
 
   async updateUser(userId, updateData) {
-    const allowedFields = ["fullName", "email", "phone", "picture"];
-    const filteredData = Object.keys(updateData)
-      .filter((key) => allowedFields.includes(key))
-      .reduce((obj, key) => {
-        obj[key] = updateData[key];
-        return obj;
-      }, {});
-
-    return await User.findByIdAndUpdate(userId, filteredData, {
+    const user = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
     }).select("-password");
+    return user;
   }
 
   async deleteUser(userId) {

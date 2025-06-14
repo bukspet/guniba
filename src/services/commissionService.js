@@ -1,6 +1,6 @@
 const Commission = require("../models/Commission");
 const User = require("../models/User");
-const Wallet = require("../models/WalletTransaction");
+const notificationService = require("./notificationService");
 const WithdrawalRequest = require("../models/WithdrawalRequest");
 const PayoutCard = require("../models/PayoutCard");
 
@@ -51,7 +51,7 @@ exports.withdrawToWallet = async (userId, amount) => {
   };
 };
 
-exports.withdrawToBank = async (userId, amount, payoutCardId) => {
+exports.withdrawToBank = async (userId, amount, payoutCardId, io) => {
   const totalCommission = await this.getUserCommissionSummary(userId);
   if (amount > totalCommission)
     throw new Error("Insufficient commission balance");
@@ -76,6 +76,16 @@ exports.withdrawToBank = async (userId, amount, payoutCardId) => {
     amount,
     status: "pending",
   });
+
+  // Notify admin
+  await createNotification(
+    {
+      title: "New Order",
+      message: "A new order was placed.",
+      forAdmin: true,
+    },
+    sendRealTimeNotification
+  );
 
   return {
     message: "Withdrawal request to bank created",

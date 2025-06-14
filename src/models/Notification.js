@@ -5,11 +5,11 @@ const NotificationSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: false,
-  }, // Null for admin notifications
+  }, // null = for admin or global
   title: { type: String, required: true },
   message: { type: String, required: true },
-  forAdmin: { type: Boolean, default: false }, // True if it's an admin notification
-  read: { type: Boolean, default: false }, // False when first created
+  forAdmin: { type: Boolean, default: false },
+  read: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
 

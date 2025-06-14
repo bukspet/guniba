@@ -1,11 +1,12 @@
 const Order = require("../models/Order");
 const User = require("../models/User");
+const notificationService = require("./notificationService");
 
 const generateOrderNo = () => {
   return `GU-${Math.floor(100000000 + Math.random() * 900000000)}`;
 };
 
-exports.createOrder = async (userId, items) => {
+exports.createOrder = async (userId, items, io) => {
   const totalPrice = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -17,6 +18,17 @@ exports.createOrder = async (userId, items) => {
     totalPrice,
     orderNo: generateOrderNo(),
   });
+
+  // Notify admin
+  await createNotification(
+    {
+      userId: someUserId,
+      title: "Order Created",
+      message: "Your order was successfully created.",
+      forAdmin: false,
+    },
+    sendRealTimeNotification
+  );
 
   return order;
 };
@@ -43,9 +55,24 @@ exports.updateOrderStatus = async (orderId, status) => {
 };
 
 exports.confirmOrderReceived = async (orderId) => {
-  return await exports.updateOrderStatus(orderId, "Completed");
-};
+  // 1️⃣ Mark order as Completed
+  const order = await exports.updateOrderStatus(orderId, "Completed");
 
+  // 2️⃣ Create ReadyToReview entries
+  for (const item of order.items) {
+    await ReadyToReview.create({
+      userId: order.user,
+      productId: item.productId,
+      variantId: item.variantId || null,
+      orderId: order._id,
+    });
+  }
+
+  return {
+    success: true,
+    message: "Order marked as completed, ready to review items added.",
+  };
+};
 exports.getAllOrders = async (filter = {}) => {
   return await Order.find(filter).populate("user items.variantId");
 };

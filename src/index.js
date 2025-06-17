@@ -18,6 +18,10 @@ const wishlistRoutes = require("./routes/wishlistRoutes.js");
 const userRoutes = require("./routes/userRoutes.js");
 const mlmRoutes = require("./routes/mlmRoutes.js");
 const withdrawalRequestRoutes = require("./routes/withdrawalRequestRoutes.js");
+
+const paymentRoutes = require("./routes/paymentRoutes.js");
+const commissionRoutes = require("./routes/commissionRoutes.js");
+
 const notificationRoutes = require("./routes/notificationRoutes.js");
 const payoutcardRoutes = require("./routes/payoutcardRoutes.js");
 const walletRoutes = require("./routes/walletRoutes.js");
@@ -67,10 +71,12 @@ app.use("/api/user", userRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/withdrawal", withdrawalRequestRoutes);
 app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/commission", commissionRoutes);
 app.use("/api/payout-card", payoutcardRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/payment", paymentRoutes);
 app.use("/api/referrals", referralRoutes);
 app.use("/api/shipping-address", shippingAddressRoutes);
 app.use("/api/notifications", notificationRoutes);

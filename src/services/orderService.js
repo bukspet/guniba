@@ -1,12 +1,15 @@
 const Order = require("../models/Order");
 const User = require("../models/User");
+const ReadyToReview = require("../models/Product"); // Assuming this exists
+const MLMService = require("./mlmService"); // Assuming this exists
 const notificationService = require("./notificationService");
+const { sendRealTimeNotification } = require("../utils/socketManager");
 
 const generateOrderNo = () => {
   return `GU-${Math.floor(100000000 + Math.random() * 900000000)}`;
 };
 
-exports.createOrder = async (userId, items, io) => {
+exports.createOrder = async (userId, items) => {
   const totalPrice = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -20,18 +23,24 @@ exports.createOrder = async (userId, items, io) => {
   });
 
   // Notify admin
-  await createNotification(
-    {
-      userId: someUserId,
-      title: "Order Created",
-      message: "Your order was successfully created.",
-      forAdmin: false,
-    },
-    sendRealTimeNotification
-  );
+  await notificationService.createNotification({
+    userId: null, // No specific admin userId
+    title: "New Order Created",
+    message: `A new order has been placed (Order No: ${order.orderNo}).`,
+    forAdmin: true,
+  });
+
+  // Notify user
+  await notificationService.createNotification({
+    userId,
+    title: "Order Created",
+    message: "Your order was successfully created.",
+    forAdmin: false,
+  });
 
   return order;
 };
+
 exports.updateOrderStatus = async (orderId, status) => {
   const order = await Order.findById(orderId);
   if (!order) throw new Error("Order not found");
@@ -46,19 +55,24 @@ exports.updateOrderStatus = async (orderId, status) => {
 
   await order.save();
 
-  // Trigger MLM logic after order is marked completed
   if (status === "Completed") {
     await MLMService.calculateCommission(order.user, order.totalPrice);
   }
+
+  // Send notification about status update
+  await notificationService.createNotification({
+    userId: order.user,
+    title: `Order ${status}`,
+    message: `Your order (Order No: ${order.orderNo}) is now ${status}.`,
+    forAdmin: false,
+  });
 
   return order;
 };
 
 exports.confirmOrderReceived = async (orderId) => {
-  // 1️⃣ Mark order as Completed
   const order = await exports.updateOrderStatus(orderId, "Completed");
 
-  // 2️⃣ Create ReadyToReview entries
   for (const item of order.items) {
     await ReadyToReview.create({
       userId: order.user,
@@ -73,6 +87,7 @@ exports.confirmOrderReceived = async (orderId) => {
     message: "Order marked as completed, ready to review items added.",
   };
 };
+
 exports.getAllOrders = async (filter = {}) => {
   return await Order.find(filter).populate("user items.variantId");
 };
@@ -87,18 +102,9 @@ exports.getUserOrdersSummary = async (userId) => {
   const summary = {
     totalOrders: orders.length,
     totalAmount: 0,
-    completed: {
-      count: 0,
-      amount: 0,
-    },
-    processing: {
-      count: 0,
-      amount: 0,
-    },
-    shipped: {
-      count: 0,
-      amount: 0,
-    },
+    completed: { count: 0, amount: 0 },
+    processing: { count: 0, amount: 0 },
+    shipped: { count: 0, amount: 0 },
   };
 
   for (const order of orders) {
@@ -118,28 +124,17 @@ exports.getUserOrdersSummary = async (userId) => {
 
   return summary;
 };
+
 exports.getAdminOrdersSummary = async () => {
   const orders = await Order.find({});
 
   const summary = {
     totalOrders: orders.length,
     totalAmount: 0,
-    completed: {
-      count: 0,
-      amount: 0,
-    },
-    processing: {
-      count: 0,
-      amount: 0,
-    },
-    shipped: {
-      count: 0,
-      amount: 0,
-    },
-    return: {
-      count: 0,
-      amount: 0,
-    },
+    completed: { count: 0, amount: 0 },
+    processing: { count: 0, amount: 0 },
+    shipped: { count: 0, amount: 0 },
+    return: { count: 0, amount: 0 },
   };
 
   for (const order of orders) {
@@ -165,8 +160,8 @@ exports.getAdminOrdersSummary = async () => {
 
 exports.getOrderById = async (orderId) => {
   const order = await Order.findById(orderId)
-    .populate("user", "name email") // Optional: only return selected user fields
-    .populate("items.variantId") // Adjust field names as needed
+    .populate("user", "name email")
+    .populate("items.variantId")
     .exec();
 
   if (!order) {

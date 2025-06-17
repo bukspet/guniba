@@ -11,16 +11,16 @@ exports.getWallet = async (req, res) => {
   }
 };
 
-exports.approveTransaction = async (req, res) => {
-  try {
-    const transaction = await walletService.approveWalletTransaction(
-      req.params.transactionId
-    );
-    res.json({
-      message: "Transaction approved and wallet updated",
-      transaction,
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+// exports.approveTransaction = async (req, res) => {
+//   try {
+//     const transaction = await walletService.approveWalletTransaction(
+//       req.params.transactionId
+//     );
+//     res.json({
+//       message: "Transaction approved and wallet updated",
+//       transaction,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };

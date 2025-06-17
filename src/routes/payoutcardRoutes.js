@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const payoutCardController = require("../controllers/payoutcardController");
-const authMiddleware = require("../middlewares/auth"); // ensure user is authenticated
+const authMiddleware = require("../middlewares/authMiddleware");
 
 router.post("/", authMiddleware, payoutCardController.createPayoutCard);
 router.put("/:id", authMiddleware, payoutCardController.updatePayoutCard);

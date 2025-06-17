@@ -1,5 +1,6 @@
 const { Product, Variant, VariantType } = require("../models/Product");
 const slugify = require("slugify");
+const { applyDiscountIfApplicable } = require("../services/discountService");
 // 🟢 Create a new product
 async function createProduct(data) {
   try {
@@ -144,7 +145,7 @@ const createVariants = async (productId, variantsData) => {
 };
 
 // 🟢 Get product with variants
-const getProductWithVariants = async (productId) => {
+const getProductWithVariants = async (productId, userCode = null) => {
   try {
     const product = await Product.findById(productId)
       .populate("variantTypes")
@@ -182,11 +183,44 @@ const getProductWithVariants = async (productId) => {
       };
     }
 
-    // Transform variants to include subnames array
-    product.variants = product.variants.map((variant) => ({
-      ...variant,
-      subnames: variant.combinations.map((combo) => combo.subname),
-    }));
+    // Get applicable discount for this product/category
+    const discount = await applyDiscountIfApplicable(
+      product._id,
+      product.category,
+      userCode
+    );
+
+    // Transform variants: subnames + discounted price
+    product.variants = product.variants.map((variant) => {
+      let discountedPrice = variant.price;
+      let discountInfo = null;
+
+      if (discount) {
+        if (discount.amountType === "fixed") {
+          discountedPrice = Math.max(0, variant.price - discount.amount);
+        } else if (discount.amountType === "percent") {
+          discountedPrice = Math.max(
+            0,
+            variant.price * (1 - discount.amount / 100)
+          );
+        }
+
+        discountInfo = {
+          id: discount._id,
+          name: discount.name,
+          method: discount.method,
+          code: discount.method === "discountcode" ? discount.code : null,
+        };
+      }
+
+      return {
+        ...variant,
+        subnames: variant.combinations.map((combo) => combo.subname),
+        originalPrice: variant.price,
+        discountedPrice,
+        discount: discountInfo,
+      };
+    });
 
     // Transform reviews to include user details & variant subnames
     product.reviews = product.reviews.map((review) => ({

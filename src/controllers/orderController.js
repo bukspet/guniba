@@ -32,7 +32,7 @@ exports.confirmReceivedController = async (req, res) => {
 
 exports.getAllOrdersController = async (req, res) => {
   try {
-    const orders = await orderService.getAllOrdersForAdmin(req.query);
+    const orders = await orderService.getAllOrders(req.query);
     res.json(orders);
   } catch (err) {
     res.status(500).json({ message: err.message });

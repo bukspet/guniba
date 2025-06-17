@@ -4,14 +4,14 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { generateReferralCode } = require("../utils/referralUtils.js");
 
-const sendRealTimeNotification = (userId, notification) => {
-  console.log(
-    `Real-time notification sent to ${userId}: ${notification.message}`
-  );
-};
-const NotificationService = require("../services/notificationService.js")(
-  sendRealTimeNotification
-);
+// const sendRealTimeNotification = (userId, notification) => {
+//   console.log(
+//     `Real-time notification sent to ${userId}: ${notification.message}`
+//   );
+// };
+// const NotificationService = require("../services/notificationService.js")(
+//   sendRealTimeNotification
+// );
 // const generateToken = (userId) => {
 //   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 // };
@@ -66,11 +66,11 @@ class AuthService {
       });
 
       // Send Welcome Notification (Non-blocking)
-      NotificationService.sendNotification(
-        newUser._id,
-        "Welcome!",
-        `Hello ${newUser.fullName}, welcome to Guniba!`
-      ).catch((err) => console.error("Notification Error:", err.message));
+      // NotificationService.sendNotification(
+      //   newUser._id,
+      //   "Welcome!",
+      //   `Hello ${newUser.fullName}, welcome to Guniba!`
+      // ).catch((err) => console.error("Notification Error:", err.message));
 
       // const token = generateToken(newUser._id);
 

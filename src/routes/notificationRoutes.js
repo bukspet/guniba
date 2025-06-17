@@ -1,42 +1,34 @@
 const express = require("express");
+const notificationController = require("../controllers/notificationController");
+const authMiddleware = require("../middlewares/authMiddleware");
+const adminMiddleware = require("../middlewares/adminMiddleware");
 
 module.exports = (sendRealTimeNotification) => {
-  const NotificationService = require("../services/notificationService.js")(
-    sendRealTimeNotification
-  );
-  const authMiddleware = require("../middlewares/authMiddleware");
-  const adminMiddleware = require("../middlewares/adminMiddleware");
+  // Optionally, pass sendRealTimeNotification to controller/service if needed
+  // (But from your code, it's used directly in the service where createNotification is called)
 
   const router = express.Router();
 
-  router.get("/user", authMiddleware, async (req, res) => {
-    try {
-      const notifications = await NotificationService.getUserNotifications(
-        req.user.userId
-      );
-      res.json(notifications);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+  // Get user notifications
+  router.get(
+    "/user",
+    authMiddleware,
+    notificationController.getMyNotifications
+  );
 
-  router.get("/admin", adminMiddleware, async (req, res) => {
-    try {
-      const notifications = await NotificationService.getAdminNotifications();
-      res.json(notifications);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+  // Get admin notifications
+  router.get(
+    "/admin",
+    adminMiddleware,
+    notificationController.getAdminNotifications
+  );
 
-  router.post("/read/:notificationId", authMiddleware, async (req, res) => {
-    try {
-      await NotificationService.markAsRead(req.params.notificationId);
-      res.status(200).json({ message: "Notification marked as read" });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+  // Mark notification as read
+  router.post(
+    "/read/:id",
+    authMiddleware,
+    notificationController.markNotificationRead
+  );
 
   return router;
 };

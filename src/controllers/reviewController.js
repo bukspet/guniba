@@ -1,6 +1,6 @@
-const reviewService = require("../services/review.service");
+const reviewService = require("../services/reviewService");
 
-exports.createReview = async (req, res) => {
+exports.createReviewController = async (req, res) => {
   try {
     const data = {
       ...req.body,
@@ -13,7 +13,7 @@ exports.createReview = async (req, res) => {
   }
 };
 
-exports.getAllReviews = async (req, res) => {
+exports.getAllReviewsController = async (req, res) => {
   try {
     const reviews = await reviewService.getReviews();
     res.json({ success: true, data: reviews });
@@ -22,7 +22,7 @@ exports.getAllReviews = async (req, res) => {
   }
 };
 
-exports.getReviewById = async (req, res) => {
+exports.getReviewByIdController = async (req, res) => {
   try {
     const review = await reviewService.getReviewById(req.params.reviewId);
     res.json({ success: true, data: review });
@@ -30,7 +30,7 @@ exports.getReviewById = async (req, res) => {
     res.status(404).json({ success: false, message: err.message });
   }
 };
-exports.getReadyToReview = async (req, res) => {
+exports.getReadyToReviewController = async (req, res) => {
   try {
     const userId = req.user._id; // Assuming you have auth middleware setting req.user
     const items = await reviewService.getReadyToReviewForUser(userId);
@@ -39,7 +39,7 @@ exports.getReadyToReview = async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 };
-exports.updateReview = async (req, res) => {
+exports.updateReviewController = async (req, res) => {
   try {
     const review = await reviewService.updateReview(
       req.params.reviewId,
@@ -52,7 +52,7 @@ exports.updateReview = async (req, res) => {
   }
 };
 
-exports.deleteReview = async (req, res) => {
+exports.deleteReviewController = async (req, res) => {
   try {
     await reviewService.deleteReview(req.params.reviewId, req.user._id);
     res.json({ success: true, message: "Review deleted" });

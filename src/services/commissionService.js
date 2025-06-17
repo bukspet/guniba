@@ -1,6 +1,6 @@
 const Commission = require("../models/Commission");
 const User = require("../models/User");
-const notificationService = require("./notificationService");
+
 const WithdrawalRequest = require("../models/WithdrawalRequest");
 const PayoutCard = require("../models/PayoutCard");
 

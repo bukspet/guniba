@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const paymentController = require("../controllers/paymentController");
-const authMiddleware = require("../middleware/authMiddleware"); // assuming you have this for req.user
-
+const authMiddleware = require("../middlewares/authMiddleware");
 // Make wallet payment
 router.post("/wallet", authMiddleware, paymentController.walletPayment);
 

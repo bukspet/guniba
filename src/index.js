@@ -68,6 +68,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/withdrawal", withdrawalRequestRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/payout-card", payoutcardRoutes);
+app.use("/api/wallet", walletRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/referrals", referralRoutes);

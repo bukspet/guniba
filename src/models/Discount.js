@@ -1,58 +1,76 @@
-const mongoose = require("mongoose");
+const discountService = require("../services/discountService");
 
-const discountSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true, trim: true },
+exports.createDiscount = async (req, res) => {
+  try {
+    const discount = await discountService.createDiscount(req.body);
+    res.status(201).json({ success: true, data: discount });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
 
-    method: {
-      type: String,
-      enum: ["automatic", "discountcode"],
-      required: true,
-    },
+exports.updateDiscount = async (req, res) => {
+  try {
+    const discount = await discountService.updateDiscount(
+      req.params.id,
+      req.body
+    );
+    res.json({ success: true, data: discount });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
 
-    code: {
-      type: String,
-      uppercase: true,
-      trim: true,
-      required: function () {
-        return this.method === "discountcode";
-      },
-    },
+exports.deleteDiscount = async (req, res) => {
+  try {
+    await discountService.deleteDiscount(req.params.id);
+    res.json({ success: true, message: "Discount deleted" });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
 
-    categories: [{ type: String }], // Can be category names or IDs
-    products: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+exports.getDiscounts = async (req, res) => {
+  try {
+    const discounts = await discountService.getDiscounts();
+    res.json({ success: true, data: discounts });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
-    discountType: {
-      type: String,
-      enum: ["Amount off products"], // Only 1 allowed for now
-      default: "Amount off products",
-    },
+exports.getDiscount = async (req, res) => {
+  try {
+    const discount = await discountService.getDiscount(req.params.id);
+    res.json({ success: true, data: discount });
+  } catch (err) {
+    res.status(404).json({ success: false, message: err.message });
+  }
+};
 
-    amountType: {
-      type: String,
-      enum: ["fixed", "percent"],
-      required: true,
-    },
+exports.changeStatus = async (req, res) => {
+  try {
+    const discount = await discountService.changeStatus(
+      req.params.id,
+      req.body.status
+    );
+    res.json({ success: true, data: discount });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
 
-    amount: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
-
-    status: {
-      type: String,
-      enum: ["draft", "active", "expired", "canceled"],
-      default: "draft",
-    },
-
-    toDisplay: { type: Boolean, default: false },
-  },
-  { timestamps: true }
-);
-
-const Discount = mongoose.model("Discount", discountSchema);
-module.exports = Discount;
+exports.validateDiscountCode = async (req, res) => {
+  try {
+    const { productId, categoryId, code } = req.body;
+    const discount = await discountService.applyDiscountIfApplicable(
+      productId,
+      categoryId,
+      code
+    );
+    if (!discount) throw new Error("No valid discount found");
+    res.json({ success: true, data: discount });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};

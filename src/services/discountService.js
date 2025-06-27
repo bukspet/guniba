@@ -1,4 +1,4 @@
-const Discount = require("../models/Discount");
+const Discount = require("../models/Discount.js");
 
 // Create
 const createDiscount = async (data) => {

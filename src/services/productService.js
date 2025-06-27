@@ -12,7 +12,6 @@ async function createProduct(data) {
       brand,
       tags,
       price,
-      promoPrice,
       images,
       description,
       variantTypes,
@@ -76,7 +75,7 @@ async function createProduct(data) {
       tags,
       SKU,
       price,
-      promoPrice,
+
       images,
       description,
       variantTypes,
@@ -98,7 +97,6 @@ async function createProduct(data) {
       })),
       stock: 10,
       price,
-      promoPrice,
     }));
 
     // ✅ Save variants

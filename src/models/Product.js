@@ -66,7 +66,7 @@ const productSchema = new mongoose.Schema(
     SKU: { type: String, unique: true, sparse: true, index: true },
     tags: [{ type: String, index: true }],
     price: { type: Number, required: true, min: 0 },
-    promoPrice: { type: Number, min: 0, default: null },
+
     shippingFee: { type: Number, min: 0 },
     images: [{ type: String, required: true }],
     description: { type: String, required: true, index: "text" },
@@ -134,7 +134,7 @@ const variantSchema = new mongoose.Schema(
     stock: { type: Number, required: true, min: 0, default: 0 },
     price: { type: Number, required: true, min: 0 },
     shippingCost: { type: Number, min: 0 },
-    promoPrice: { type: Number, min: 0, default: null },
+
     available: { type: Boolean, default: false },
   },
   { timestamps: true }

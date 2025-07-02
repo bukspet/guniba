@@ -63,7 +63,7 @@ const productSchema = new mongoose.Schema(
     slug: { type: String, required: true, unique: true, index: true },
     category: { type: String, required: true, index: true },
     brand: { type: String, index: true },
-    SKU: { type: String, unique: true, sparse: true, index: true },
+    SKU: { type: String, index: true },
     tags: [{ type: String, index: true }],
     price: { type: Number, required: true, min: 0 },
     shippingFee: { type: Number, min: 0 },

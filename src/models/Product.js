@@ -66,7 +66,7 @@ const productSchema = new mongoose.Schema(
     SKU: { type: String, index: true },
     tags: [{ type: String, index: true }],
     price: { type: Number, required: true, min: 0 },
-    shippingFee: { type: Number, min: 0 },
+    shippingFee: { type: Number, min: 0, default: 0 },
     order: { type: Number, default: 0, min: 0 },
     revenue: { type: Number, default: 0, min: 0 },
     images: [{ type: String, required: true }],

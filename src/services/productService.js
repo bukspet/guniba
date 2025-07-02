@@ -77,7 +77,8 @@ async function createProduct(data) {
       tags,
       SKU,
       price,
-
+      productDetails,
+      keyInformation,
       images,
       description,
       variantTypes,

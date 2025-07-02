@@ -107,7 +107,7 @@ async function createProduct(data) {
     product.variants = savedVariants.map((v) => v._id);
     await product.save();
 
-    return { product, variants: savedVariants, otherDetails };
+    return { product };
   } catch (error) {
     console.error("Error creating product:", error.message);
     throw new Error(error.message);
@@ -247,11 +247,24 @@ const getProductWithVariants = async (productId, userCode = null) => {
 };
 
 const setProductPermanent = async (productId) => {
-  return await Product.findByIdAndUpdate(
+  // Set the specified product as permanent (temporal: false)
+  const updatedProduct = await Product.findByIdAndUpdate(
     productId,
     { temporal: false },
     { new: true }
   );
+
+  if (!updatedProduct) {
+    throw new Error("Product not found or update failed");
+  }
+
+  // Delete all other products that are still temporal
+  await Product.deleteMany({
+    _id: { $ne: productId }, // exclude the updated product
+    temporal: true,
+  });
+
+  return updatedProduct;
 };
 
 const getAllProductsWithVariants = async (
@@ -305,6 +318,7 @@ const getAllProductsWithVariants = async (
       ...searchFilter,
       ...priceQuery,
       ...ratingQuery,
+      temporal: false,
     };
 
     let mongoSort = {};

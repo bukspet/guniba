@@ -56,6 +56,15 @@ exports.updateOrderStatus = async (orderId, status) => {
   await order.save();
 
   if (status === "Completed") {
+    for (const item of order.items) {
+      await Product.findByIdAndUpdate(item.product, {
+        $inc: {
+          order: 1,
+          revenue: item.price * item.quantity,
+        },
+      });
+    }
+
     await MLMService.calculateCommission(order.user, order.totalPrice);
   }
 
@@ -71,7 +80,7 @@ exports.updateOrderStatus = async (orderId, status) => {
 };
 
 exports.confirmOrderReceived = async (orderId) => {
-  const order = await exports.updateOrderStatus(orderId, "Completed");
+  const order = await updateOrderStatus(orderId, "Completed");
 
   for (const item of order.items) {
     await ReadyToReview.create({

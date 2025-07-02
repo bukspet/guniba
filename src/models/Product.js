@@ -66,12 +66,12 @@ const productSchema = new mongoose.Schema(
     SKU: { type: String, unique: true, sparse: true, index: true },
     tags: [{ type: String, index: true }],
     price: { type: Number, required: true, min: 0 },
-
     shippingFee: { type: Number, min: 0 },
+    order: { type: Number, default: 0, min: 0 },
+    revenue: { type: Number, default: 0, min: 0 },
     images: [{ type: String, required: true }],
     description: { type: String, required: true, index: "text" },
     keyFeatures: { type: String, default: null },
-
     productDetails: { type: String, default: null },
     keyInformation: { type: String, default: null },
     rating: { type: Number, default: 0, min: 0, max: 5 },
@@ -80,6 +80,7 @@ const productSchema = new mongoose.Schema(
       { type: mongoose.Schema.Types.ObjectId, ref: "VariantType" },
     ],
     variants: [{ type: mongoose.Schema.Types.ObjectId, ref: "Variant" }],
+    stock: { type: Number, default: 0, min: 0 }, // ✅ stored in DB, updated via middleware
     status: {
       type: String,
       enum: ["active", "inactive", "draft"],
@@ -88,27 +89,46 @@ const productSchema = new mongoose.Schema(
     reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
     temporal: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
-const Product = mongoose.model("Product", productSchema);
-
-const variantTypeSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  values: [
-    {
-      subname: { type: String, required: true },
-      image: { type: String },
-    },
-  ],
-  used: { type: Boolean, default: false },
+// ✅ Virtual for live calculation if variants are populated
+productSchema.virtual("computedStock").get(function () {
+  if (!this.variants || !Array.isArray(this.variants)) return 0;
+  return this.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
 });
 
-variantTypeSchema.index({ name: 1 }, { unique: false });
+// ✅ Static: Calculate stock from populated variants only
+productSchema.statics.getProductStock = async function (productId) {
+  const product = await this.findById(productId).populate("variants").exec();
+  if (!product) throw new Error("Product not found");
 
-const VariantType = mongoose.model("VariantType", variantTypeSchema);
+  const totalStock = product.variants.reduce(
+    (sum, variant) => sum + (variant.stock || 0),
+    0
+  );
 
-module.exports = VariantType;
+  return totalStock;
+};
+
+// ✅ Static: Return full product and attach computed stock to `.stock` field
+productSchema.statics.findWithStock = async function (productId) {
+  const product = await this.findById(productId).populate("variants").lean();
+  if (!product) throw new Error("Product not found");
+
+  product.stock = product.variants.reduce(
+    (sum, variant) => sum + (variant.stock || 0),
+    0
+  );
+
+  return product;
+};
+
+const Product = mongoose.model("Product", productSchema);
 
 // 🟢 Variant Schema
 const variantSchema = new mongoose.Schema(
@@ -134,12 +154,57 @@ const variantSchema = new mongoose.Schema(
     stock: { type: Number, required: true, min: 0, default: 0 },
     price: { type: Number, required: true, min: 0 },
     shippingCost: { type: Number, min: 0 },
-
     available: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
+// Declare Variant model after schema definition to use inside middleware
 const Variant = mongoose.model("Variant", variantSchema);
+
+// ✅ Middleware to update product stock on save
+variantSchema.post("save", async function () {
+  try {
+    const variants = await Variant.find({ productId: this.productId });
+    const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+
+    const Product = require("./Product"); // Adjust path if needed
+    await Product.findByIdAndUpdate(this.productId, { stock: totalStock });
+  } catch (err) {
+    console.error("Error updating product stock on variant save:", err);
+  }
+});
+
+// ✅ Middleware to update product stock on delete
+variantSchema.post("findOneAndDelete", async function (doc) {
+  if (!doc) return;
+
+  try {
+    const variants = await Variant.find({ productId: doc.productId });
+    const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+
+    const Product = require("./Product");
+    await Product.findByIdAndUpdate(doc.productId, { stock: totalStock });
+  } catch (err) {
+    console.error("Error updating product stock on variant delete:", err);
+  }
+});
+
+const variantTypeSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  values: [
+    {
+      subname: { type: String, required: true },
+      image: { type: String },
+    },
+  ],
+  used: { type: Boolean, default: false },
+});
+
+variantTypeSchema.index({ name: 1 }, { unique: false });
+
+const VariantType = mongoose.model("VariantType", variantTypeSchema);
+
+module.exports = VariantType;
 
 module.exports = { Product, VariantType, Variant, Review, ReadyToReview };

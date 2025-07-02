@@ -13,12 +13,15 @@ async function createProduct(data) {
       tags,
       productDetails,
       price,
+      shippingFee,
       images,
       keyInformation,
       description,
       variantTypes,
       SKU,
     } = data;
+
+    console.log(productDetails, keyInformation, "check");
 
     // ✅ Generate slug from product name
     let slug = slugify(name, { lower: true, strict: true });
@@ -60,13 +63,6 @@ async function createProduct(data) {
     let variantCombinations = generateCombinations(variantValues);
 
     // ✅ Map variant types for additional details
-    const otherDetails = {
-      SKU,
-      variants: variantTypeData.map((variant) => ({
-        typeName: variant.name,
-        subnames: variant.values.map((value) => value.subname),
-      })),
-    };
 
     // ✅ Create and save product
     const product = await Product.create({
@@ -74,6 +70,7 @@ async function createProduct(data) {
       slug: uniqueSlug,
       category,
       brand,
+      shippingFee,
       tags,
       SKU,
       price,

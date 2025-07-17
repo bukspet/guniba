@@ -9,28 +9,23 @@ const generateOrderNo = () => {
   return `GU-${Math.floor(100000000 + Math.random() * 900000000)}`;
 };
 
-exports.createOrder = async (userId, items) => {
-  const totalPrice = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-
+exports.createOrder = async (userId, items, totalPrice, method) => {
   const order = await Order.create({
     user: userId,
     items,
     totalPrice,
+    method,
     orderNo: generateOrderNo(),
   });
 
-  // Notify admin
+  // Notifications (unchanged)
   await notificationService.createNotification({
-    userId: null, // No specific admin userId
+    userId: null,
     title: "New Order Created",
     message: `A new order has been placed (Order No: ${order.orderNo}).`,
     forAdmin: true,
   });
 
-  // Notify user
   await notificationService.createNotification({
     userId,
     title: "Order Created",
@@ -45,7 +40,12 @@ exports.updateOrderStatus = async (orderId, status) => {
   const order = await Order.findById(orderId);
   if (!order) throw new Error("Order not found");
 
+  // Update status and relevant timestamp
   order.status = status;
+
+  if (status === "Shipped") {
+    order.shippedAt = new Date(); // Record shipping time
+  }
 
   if (status === "Return") {
     const user = await User.findById(order.user);
@@ -55,20 +55,7 @@ exports.updateOrderStatus = async (orderId, status) => {
 
   await order.save();
 
-  if (status === "Completed") {
-    for (const item of order.items) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: {
-          order: 1,
-          revenue: item.price * item.quantity,
-        },
-      });
-    }
-
-    await MLMService.calculateCommission(order.user, order.totalPrice);
-  }
-
-  // Send notification about status update
+  // Send status update notification
   await notificationService.createNotification({
     userId: order.user,
     title: `Order ${status}`,
@@ -80,8 +67,25 @@ exports.updateOrderStatus = async (orderId, status) => {
 };
 
 exports.confirmOrderReceived = async (orderId) => {
-  const order = await updateOrderStatus(orderId, "Completed");
+  const order = await Order.findById(orderId);
+  if (!order) throw new Error("Order not found");
 
+  order.status = "Completed";
+  order.completedAt = new Date(); // Record completion time
+
+  await order.save();
+
+  // Update product stats
+  for (const item of order.items) {
+    await Product.findByIdAndUpdate(item.product, {
+      $inc: {
+        order: 1,
+        revenue: item.price * item.quantity,
+      },
+    });
+  }
+
+  // Create ready-to-review entries
   for (const item of order.items) {
     await ReadyToReview.create({
       userId: order.user,
@@ -91,9 +95,20 @@ exports.confirmOrderReceived = async (orderId) => {
     });
   }
 
+  // Calculate MLM commission
+  await MLMService.calculateCommission(order.user, order.totalPrice);
+
+  // Notify user
+  await notificationService.createNotification({
+    userId: order.user,
+    title: "Order Completed",
+    message: `Your order (Order No: ${order.orderNo}) has been marked as completed.`,
+    forAdmin: false,
+  });
+
   return {
     success: true,
-    message: "Order marked as completed, ready to review items added.",
+    message: "Order marked as completed. Items ready for review.",
   };
 };
 
@@ -101,8 +116,43 @@ exports.getAllOrders = async (filter = {}) => {
   return await Order.find(filter).populate("user items.variantId");
 };
 
-exports.getAllOrdersForUser = async (userId) => {
-  return await Order.find({ user: userId }).populate("items.variantId");
+exports.getAllOrdersForUser = async (userId, orderNo, status, dateRange) => {
+  const filter = { user: userId };
+
+  if (orderNo) {
+    filter.orderNo = { $regex: `^${orderNo.trim()}`, $options: "i" };
+  }
+
+  if (status && status !== "all") {
+    filter.status = status;
+  }
+
+  if (dateRange) {
+    const now = new Date();
+    let startDate;
+
+    if (dateRange === "last30days") {
+      startDate = new Date(now.setDate(now.getDate() - 30));
+    } else if (dateRange === "last7days") {
+      startDate = new Date(now.setDate(now.getDate() - 7));
+    }
+
+    if (startDate) {
+      filter.createdAt = { $gte: startDate };
+    }
+  }
+
+  return await Order.find(filter).populate({
+    path: "items.variantId",
+    populate: {
+      path: "productId",
+      select: "name images variantTypes",
+      populate: {
+        path: "variantTypes", // Populate the variantTypes array
+        select: "_id name", // Select only name or other fields you need
+      },
+    },
+  });
 };
 
 exports.getUserOrdersSummary = async (userId) => {
@@ -170,7 +220,17 @@ exports.getAdminOrdersSummary = async () => {
 exports.getOrderById = async (orderId) => {
   const order = await Order.findById(orderId)
     .populate("user", "name email")
-    .populate("items.variantId")
+    .populate({
+      path: "items.variantId",
+      populate: {
+        path: "productId",
+        select: "name images variantTypes",
+        populate: {
+          path: "variantTypes",
+          select: "_id name",
+        },
+      },
+    })
     .exec();
 
   if (!order) {

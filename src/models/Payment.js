@@ -11,6 +11,18 @@ const PaymentSchema = new mongoose.Schema({
     enum: ["pending", "successful", "failed"],
     default: "pending",
   },
+
+  items: [
+    {
+      id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Variant",
+        required: true,
+      },
+      quantity: { type: Number, required: true },
+      price: { type: Number, required: true },
+    },
+  ],
   reference: { type: String, unique: true, required: true }, // Paystack ref or internal
   date: { type: Date, default: Date.now },
 });

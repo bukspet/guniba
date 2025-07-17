@@ -101,7 +101,6 @@ class AuthService {
   static async signin({ email, password }) {
     try {
       const user = await User.findOne({ email });
-      console.log("User Found:", user); // Debugging
 
       if (!user) {
         return {
@@ -112,7 +111,6 @@ class AuthService {
       }
 
       const isPasswordValid = await bcrypt.compare(password, user.password);
-      console.log("Password Match:", isPasswordValid); // Debugging
 
       if (!isPasswordValid) {
         return {
@@ -122,20 +120,23 @@ class AuthService {
         };
       }
 
+      // Generate tokens
       const { accessToken, refreshToken } = generateTokens(
         user._id,
         user.role,
         "both"
       );
+
+      // Convert Mongoose user to plain object and remove password
+      const userObj = user.toObject();
+      delete userObj.password;
+
+      // Add tokens
       return {
         success: true,
         message: "Signin successful",
         data: {
-          id: user._id,
-          fullName: user.fullName,
-          email: user.email,
-          role: user.role,
-          referralCode: user.referralCode,
+          ...userObj,
           accessToken,
           refreshToken,
         },

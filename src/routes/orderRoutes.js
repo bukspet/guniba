@@ -2,12 +2,17 @@ const express = require("express");
 const OrderController = require("../controllers/orderController");
 
 const router = express.Router();
+const authMiddleware = require("../middlewares/authMiddleware");
 
 router.post("/create-order", OrderController.createOrderController);
 router.get("/", OrderController.getAllOrdersController);
-router.get("/user", OrderController.getUserOrdersController);
+router.get("/user", authMiddleware, OrderController.getUserOrdersController);
 
-router.get("/summary", OrderController.getUserOrderSummaryController);
+router.get(
+  "/summary",
+  authMiddleware,
+  OrderController.getUserOrderSummaryController
+);
 router.get(
   "/admin-order-summary",
   OrderController.getAdminOrderSummaryController

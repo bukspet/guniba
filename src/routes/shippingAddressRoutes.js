@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const ShippingAddressController = require("../controllers/shippingAddressController");
-// const authMiddleware = require("../middlewares/auth"); // If you have one
+const authMiddleware = require("../middlewares/authMiddleware");
 
-// router.use(authMiddleware); // Protect routes
+router.use(authMiddleware);
 
 router.post("/shipping-address", ShippingAddressController.create);
 router.put("/shipping-address/:id", ShippingAddressController.update);

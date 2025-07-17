@@ -41,7 +41,13 @@ exports.getAllOrdersController = async (req, res) => {
 
 exports.getUserOrdersController = async (req, res) => {
   try {
-    const orders = await orderService.getAllOrdersForUser(req.user.id);
+    const { orderNo, status, dateRange } = req.query;
+    const orders = await orderService.getAllOrdersForUser(
+      req.user._id,
+      orderNo,
+      status,
+      dateRange
+    );
     res.json(orders);
   } catch (err) {
     res.status(500).json({ message: err.message });

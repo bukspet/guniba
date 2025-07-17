@@ -37,7 +37,7 @@ const shippingAddressSchema = new mongoose.Schema(
     },
     isDefault: {
       type: Boolean,
-      default: false,
+      default: true,
     },
   },
   { timestamps: true }

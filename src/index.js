@@ -84,7 +84,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/referrals", referralRoutes);
-app.use("/api/shipping-address", shippingAddressRoutes);
+app.use("/api", shippingAddressRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/searched-words", searchedWordRoutes);
 

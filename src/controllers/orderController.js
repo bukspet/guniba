@@ -12,9 +12,20 @@ exports.createOrderController = async (req, res) => {
 
 exports.updateOrderStatusController = async (req, res) => {
   try {
-    const { orderId, status } = req.body;
-    const order = await orderService.updateOrderStatus(orderId, status);
-    res.json(order);
+    const { orderIds, status } = req.body;
+
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Order IDs must be a non-empty array." });
+    }
+
+    const updatedOrders = await orderService.updateMultipleOrderStatus(
+      orderIds,
+      status
+    );
+
+    res.json({ message: "Orders updated successfully", orders: updatedOrders });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -22,7 +33,7 @@ exports.updateOrderStatusController = async (req, res) => {
 
 exports.confirmReceivedController = async (req, res) => {
   try {
-    const { orderId } = req.body;
+    const { orderId } = req.params;
     const order = await orderService.confirmOrderReceived(orderId);
     res.json(order);
   } catch (err) {

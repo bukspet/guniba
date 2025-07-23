@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const User = require("../models/User");
-const ReadyToReview = require("../models/Product"); // Assuming this exists
+const mongoose = require("mongoose");
+const { Product, ReadyToReview } = require("../models/Product");
 const MLMService = require("./mlmService"); // Assuming this exists
 const notificationService = require("./notificationService");
 const { sendRealTimeNotification } = require("../utils/socketManager");
@@ -9,16 +10,27 @@ const generateOrderNo = () => {
   return `GU-${Math.floor(100000000 + Math.random() * 900000000)}`;
 };
 
-exports.createOrder = async (userId, items, totalPrice, method) => {
+exports.createOrder = async (
+  userId,
+  items,
+  totalPrice,
+  method,
+  shippingAddressId
+) => {
+  if (!shippingAddressId) {
+    throw new Error("Shipping address is required");
+  }
+
   const order = await Order.create({
     user: userId,
     items,
     totalPrice,
     method,
     orderNo: generateOrderNo(),
+    shippingAddress: shippingAddressId,
   });
 
-  // Notifications (unchanged)
+  // Notifications
   await notificationService.createNotification({
     userId: null,
     title: "New Order Created",
@@ -36,69 +48,97 @@ exports.createOrder = async (userId, items, totalPrice, method) => {
   return order;
 };
 
-exports.updateOrderStatus = async (orderId, status) => {
-  const order = await Order.findById(orderId);
-  if (!order) throw new Error("Order not found");
+exports.updateMultipleOrderStatus = async (orderIds, status) => {
+  const validIds = orderIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
 
-  // Update status and relevant timestamp
-  order.status = status;
-
-  if (status === "Shipped") {
-    order.shippedAt = new Date(); // Record shipping time
+  if (validIds.length === 0) {
+    throw new Error("No valid Order IDs provided.");
   }
 
-  if (status === "Return") {
-    const user = await User.findById(order.user);
-    user.wallet += order.totalPrice;
-    await user.save();
+  const updatedOrders = [];
+
+  for (const id of validIds) {
+    const order = await Order.findById(id);
+    if (!order) continue;
+
+    order.status = status;
+
+    if (status === "Shipped") {
+      order.shippedAt = new Date();
+    }
+
+    if (status === "Return") {
+      const user = await User.findById(order.user);
+      if (user) {
+        user.wallet += order.totalPrice;
+        await user.save();
+      }
+    }
+
+    await order.save();
+
+    await notificationService.createNotification({
+      userId: order.user,
+      title: `Order ${status}`,
+      message: `Your order (Order No: ${order.orderNo}) is now ${status}.`,
+      forAdmin: false,
+    });
+
+    updatedOrders.push(order);
   }
 
-  await order.save();
-
-  // Send status update notification
-  await notificationService.createNotification({
-    userId: order.user,
-    title: `Order ${status}`,
-    message: `Your order (Order No: ${order.orderNo}) is now ${status}.`,
-    forAdmin: false,
-  });
-
-  return order;
+  return updatedOrders;
 };
 
 exports.confirmOrderReceived = async (orderId) => {
-  const order = await Order.findById(orderId);
+  const order = await Order.findById(orderId).populate({
+    path: "items.variantId",
+    populate: {
+      path: "productId",
+      select: "name images variantTypes",
+      populate: {
+        path: "variantTypes",
+        select: "_id name",
+      },
+    },
+  });
+
   if (!order) throw new Error("Order not found");
 
+  // ✅ Update order status
   order.status = "Completed";
-  order.completedAt = new Date(); // Record completion time
-
+  order.completedAt = new Date();
   await order.save();
 
-  // Update product stats
+  // ✅ Update product stats
   for (const item of order.items) {
-    await Product.findByIdAndUpdate(item.product, {
-      $inc: {
-        order: 1,
-        revenue: item.price * item.quantity,
-      },
-    });
+    const productId = item.variantId?.productId?._id;
+    if (productId) {
+      await Product.findByIdAndUpdate(productId, {
+        $inc: {
+          order: 1,
+          revenue: item.price * item.quantity,
+        },
+      });
+    } else {
+      console.warn("Product ID missing for item:", item);
+    }
   }
 
-  // Create ready-to-review entries
+  // ✅ Create ready-to-review entries
   for (const item of order.items) {
     await ReadyToReview.create({
       userId: order.user,
-      productId: item.productId,
-      variantId: item.variantId || null,
+      productId: item.variantId?.productId?._id,
+      variantId: item.variantId?._id || null,
       orderId: order._id,
     });
   }
 
-  // Calculate MLM commission
-  await MLMService.calculateCommission(order.user, order.totalPrice);
+  // ✅ Calculate MLM commission
+  await MLMService.calculateCommission(order.user, order.totalPrice, order._id);
 
-  // Notify user
+  // ✅ Notify user
   await notificationService.createNotification({
     userId: order.user,
     title: "Order Completed",
@@ -113,7 +153,9 @@ exports.confirmOrderReceived = async (orderId) => {
 };
 
 exports.getAllOrders = async (filter = {}) => {
-  return await Order.find(filter).populate("user items.variantId");
+  return await Order.find(filter)
+    .populate("user items.variantId")
+    .sort({ createdAt: -1 }); // ✅ Most recent first
 };
 
 exports.getAllOrdersForUser = async (userId, orderNo, status, dateRange) => {
@@ -142,17 +184,19 @@ exports.getAllOrdersForUser = async (userId, orderNo, status, dateRange) => {
     }
   }
 
-  return await Order.find(filter).populate({
-    path: "items.variantId",
-    populate: {
-      path: "productId",
-      select: "name images variantTypes",
+  return await Order.find(filter)
+    .populate({
+      path: "items.variantId",
       populate: {
-        path: "variantTypes", // Populate the variantTypes array
-        select: "_id name", // Select only name or other fields you need
+        path: "productId",
+        select: "name images variantTypes",
+        populate: {
+          path: "variantTypes", // Populate the variantTypes array
+          select: "_id name", // Select only name or other fields you need
+        },
       },
-    },
-  });
+    })
+    .sort({ createdAt: -1 }); // ✅ Most recent first
 };
 
 exports.getUserOrdersSummary = async (userId) => {
@@ -219,7 +263,8 @@ exports.getAdminOrdersSummary = async () => {
 
 exports.getOrderById = async (orderId) => {
   const order = await Order.findById(orderId)
-    .populate("user", "name email")
+    .populate("user", "name email phone")
+    .populate("shippingAddress") // ✅ Populate all shipping address fields
     .populate({
       path: "items.variantId",
       populate: {

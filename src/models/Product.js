@@ -1,5 +1,8 @@
 const mongoose = require("mongoose");
 
+/* ===============================
+   ReadyToReview Schema
+================================= */
 const readyToReviewSchema = new mongoose.Schema(
   {
     userId: {
@@ -22,9 +25,9 @@ const readyToReviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const ReadyToReview = mongoose.model("ReadyToReview", readyToReviewSchema);
-
-// 🟢 Review Schema
+/* ===============================
+   Review Schema
+================================= */
 const reviewSchema = new mongoose.Schema(
   {
     productId: {
@@ -33,11 +36,7 @@ const reviewSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    variantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Variant",
-      required: false, // Optional in case the review is for the product as a whole
-    },
+    variantId: { type: mongoose.Schema.Types.ObjectId, ref: "Variant" },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -45,18 +44,14 @@ const reviewSchema = new mongoose.Schema(
     },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, required: true, trim: true },
-    images: [
-      {
-        type: String, // Could be a URL or Cloudinary public_id, etc.
-      },
-    ],
+    images: [{ type: String }],
   },
   { timestamps: true }
 );
 
-const Review = mongoose.model("Review", reviewSchema);
-
-// 🟢 Product Schema (Updated with reviews)
+/* ===============================
+   Product Schema
+================================= */
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, index: "text" },
@@ -80,7 +75,7 @@ const productSchema = new mongoose.Schema(
       { type: mongoose.Schema.Types.ObjectId, ref: "VariantType" },
     ],
     variants: [{ type: mongoose.Schema.Types.ObjectId, ref: "Variant" }],
-    stock: { type: Number, default: 0, min: 0 }, // ✅ stored in DB, updated via middleware
+    stock: { type: Number, default: 0, min: 0 },
     status: {
       type: String,
       enum: ["active", "inactive", "draft"],
@@ -89,48 +84,12 @@ const productSchema = new mongoose.Schema(
     reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
     temporal: { type: Boolean, default: true },
   },
-  {
-    timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-  }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-// ✅ Virtual for live calculation if variants are populated
-productSchema.virtual("computedStock").get(function () {
-  if (!this.variants || !Array.isArray(this.variants)) return 0;
-  return this.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
-});
-
-// ✅ Static: Calculate stock from populated variants only
-productSchema.statics.getProductStock = async function (productId) {
-  const product = await this.findById(productId).populate("variants").exec();
-  if (!product) throw new Error("Product not found");
-
-  const totalStock = product.variants.reduce(
-    (sum, variant) => sum + (variant.stock || 0),
-    0
-  );
-
-  return totalStock;
-};
-
-// ✅ Static: Return full product and attach computed stock to `.stock` field
-productSchema.statics.findWithStock = async function (productId) {
-  const product = await this.findById(productId).populate("variants").lean();
-  if (!product) throw new Error("Product not found");
-
-  product.stock = product.variants.reduce(
-    (sum, variant) => sum + (variant.stock || 0),
-    0
-  );
-
-  return product;
-};
-
-const Product = mongoose.model("Product", productSchema);
-
-// 🟢 Variant Schema
+/* ===============================
+   Variant Schema
+================================= */
 const variantSchema = new mongoose.Schema(
   {
     productId: {
@@ -159,52 +118,54 @@ const variantSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Declare Variant model after schema definition to use inside middleware
-const Variant = mongoose.model("Variant", variantSchema);
-
-// ✅ Middleware to update product stock on save
+/* ✅ Middleware: Update product stock on save/delete */
 variantSchema.post("save", async function () {
   try {
+    const Variant = mongoose.model("Variant");
+    const Product = mongoose.model("Product");
     const variants = await Variant.find({ productId: this.productId });
     const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
-
-    const Product = require("./Product"); // Adjust path if needed
     await Product.findByIdAndUpdate(this.productId, { stock: totalStock });
   } catch (err) {
-    console.error("Error updating product stock on variant save:", err);
+    console.error("Error updating product stock:", err);
   }
 });
 
-// ✅ Middleware to update product stock on delete
 variantSchema.post("findOneAndDelete", async function (doc) {
   if (!doc) return;
-
   try {
+    const Variant = mongoose.model("Variant");
+    const Product = mongoose.model("Product");
     const variants = await Variant.find({ productId: doc.productId });
     const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
-
-    const Product = require("./Product");
     await Product.findByIdAndUpdate(doc.productId, { stock: totalStock });
   } catch (err) {
-    console.error("Error updating product stock on variant delete:", err);
+    console.error("Error updating product stock:", err);
   }
 });
 
+/* ===============================
+   VariantType Schema
+================================= */
 const variantTypeSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   values: [
-    {
-      subname: { type: String, required: true },
-      image: { type: String },
-    },
+    { subname: { type: String, required: true }, image: { type: String } },
   ],
   used: { type: Boolean, default: false },
 });
+variantTypeSchema.index({ name: 1 });
 
-variantTypeSchema.index({ name: 1 }, { unique: false });
-
+/* ===============================
+   Create Models
+================================= */
+const ReadyToReview = mongoose.model("ReadyToReview", readyToReviewSchema);
+const Review = mongoose.model("Review", reviewSchema);
+const Product = mongoose.model("Product", productSchema);
+const Variant = mongoose.model("Variant", variantSchema);
 const VariantType = mongoose.model("VariantType", variantTypeSchema);
 
-module.exports = VariantType;
-
-module.exports = { Product, VariantType, Variant, Review, ReadyToReview };
+/* ===============================
+   Export Models
+================================= */
+module.exports = { Product, Variant, VariantType, Review, ReadyToReview };

@@ -1,10 +1,20 @@
-// models/Order.js
 const mongoose = require("mongoose");
 
 const OrderSchema = new mongoose.Schema(
   {
     orderNo: { type: String, required: true, unique: true },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    shippingAddress: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ShippingAddress", // ✅ Reference the ShippingAddress model
+      required: true,
+    },
 
     items: [
       {
@@ -13,13 +23,19 @@ const OrderSchema = new mongoose.Schema(
           ref: "Variant",
           required: true,
         },
-        price: Number,
-        quantity: Number,
+        price: { type: Number, required: true },
+        quantity: { type: Number, required: true },
       },
     ],
 
     totalPrice: { type: Number, required: true, min: 0 },
-    method: { type: String, enum: ["wallet", "paystack"], required: true },
+
+    method: {
+      type: String,
+      enum: ["wallet", "paystack"],
+      required: true,
+    },
+
     status: {
       type: String,
       enum: ["Processing", "Shipped", "Completed", "Return"],

@@ -9,7 +9,7 @@ const mongoose = require("mongoose");
 const generateReference = () =>
   "PM" + Math.floor(1000000000 + Math.random() * 9000000000);
 
-exports.initiateWalletPayment = async (userId, items) => {
+exports.initiateWalletPayment = async (userId, items, shippingAddress) => {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
@@ -36,6 +36,7 @@ exports.initiateWalletPayment = async (userId, items) => {
     })),
   });
 
+  // ✅ Pass shippingAddress
   const order = await createOrder(
     payment.user,
     items.map((item) => ({
@@ -44,7 +45,8 @@ exports.initiateWalletPayment = async (userId, items) => {
       quantity: item.quantity,
     })),
     payment.amount,
-    payment.method
+    payment.method,
+    shippingAddress
   );
 
   payment.order = order._id;
@@ -53,7 +55,7 @@ exports.initiateWalletPayment = async (userId, items) => {
   return { message: "Payment successful via wallet", payment, order };
 };
 
-exports.initiatePaystackPayment = async (userId, items) => {
+exports.initiatePaystackPayment = async (userId, items, shippingAddress) => {
   const totalPrice =
     items.reduce((sum, item) => sum + item.price * item.quantity, 0) * 1.1;
 
@@ -61,10 +63,11 @@ exports.initiatePaystackPayment = async (userId, items) => {
 
   const payment = await Payment.create({
     user: userId,
-    amount: Number(totalPrice.toFixed(2)), // Save as number
+    amount: Number(totalPrice.toFixed(2)),
     method: "paystack",
     status: "pending",
     reference,
+    shippingAddress, // ✅ Save shipping address
     items: items.map((item) => ({
       id: item.id,
       price: item.price,
@@ -99,20 +102,14 @@ exports.verifyAndCompletePaystackPayment = async (reference) => {
     payment.user,
     items,
     payment.amount,
-    payment.method
+    payment.method,
+    payment.shippingAddress // ✅ Pass shippingAddress
   );
 
   payment.order = order._id;
   payment.status = "successful";
 
   await payment.save();
-
-  // console.time("redis.setEx");
-  // await redisClient.setEx(
-  //   `payment:${reference}`,
-  //   3600,
-  //   JSON.stringify({ status: "successful", orderId: order._id })
-  // );
 
   return { message: "Payment successful via Paystack", payment, order };
 };

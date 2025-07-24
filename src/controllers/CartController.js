@@ -16,9 +16,38 @@ const getCartController = async (req, res) => {
 
 const addToCartController = async (req, res) => {
   try {
-    const cart = await addToCart(req.user.id, req.body);
-    res.status(200).json(cart);
+    const {
+      variantId,
+      productId,
+      quantity,
+      price,
+      shippingCost = 0,
+    } = req.body;
+
+    console.log("Incoming body:", req.body);
+
+    // ✅ Basic validation
+    if (!variantId || !productId || !quantity || !price) {
+      return res.status(400).json({
+        message: "variantId, productId, quantity, and price are required",
+      });
+    }
+
+    // ✅ Call the service
+    const cart = await addToCart(req.user.id, {
+      variantId,
+      productId,
+      quantity,
+      price,
+      shippingCost,
+    });
+
+    return res.status(200).json({
+      message: "Item added to cart successfully",
+      cart,
+    });
   } catch (err) {
+    console.error("Add to cart error:", err);
     res.status(500).json({ message: err.message });
   }
 };

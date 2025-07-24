@@ -15,7 +15,7 @@ router.use(authMiddleware);
 
 router.get("/", getCartController);
 router.post("/", addToCartController);
-router.patch("/:variantId", removeItemController);
-router.delete("/:variantId", updateQuantityController);
+router.delete("/:variantId", removeItemController);
+router.patch("/:variantId", updateQuantityController);
 
 module.exports = router;

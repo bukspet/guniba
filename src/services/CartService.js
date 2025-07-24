@@ -1,16 +1,21 @@
 const Cart = require("../models/Cart");
 const mongoose = require("mongoose");
+const { Product } = require("../models/Product");
 const getCartByUser = async (userId) => {
   return await Cart.findOne({ userId }).populate("items.variantId");
 };
 
-const addToCart = async (userId, { variantId, productId, quantity }) => {
+const addToCart = async (
+  userId,
+  { variantId, productId, quantity, price, shippingCost = 0 }
+) => {
+  console.log(price, "red");
   let cart = await Cart.findOne({ userId });
 
   if (!cart) {
     cart = await Cart.create({
       userId,
-      items: [{ variantId, productId, quantity }],
+      items: [{ variantId, productId, quantity, price, shippingCost }],
     });
   } else {
     const existingItem = cart.items.find(
@@ -20,7 +25,7 @@ const addToCart = async (userId, { variantId, productId, quantity }) => {
     if (existingItem) {
       existingItem.quantity += quantity;
     } else {
-      cart.items.push({ variantId, productId, quantity });
+      cart.items.push({ variantId, productId, quantity, price, shippingCost });
     }
 
     await cart.save();

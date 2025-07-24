@@ -5,6 +5,7 @@ const { Product, ReadyToReview } = require("../models/Product");
 const MLMService = require("./mlmService"); // Assuming this exists
 const notificationService = require("./notificationService");
 const { sendRealTimeNotification } = require("../utils/socketManager");
+const ShippingAddress = require("../models/ShippingAddress");
 
 const generateOrderNo = () => {
   return `GU-${Math.floor(100000000 + Math.random() * 900000000)}`;
@@ -19,6 +20,12 @@ exports.createOrder = async (
 ) => {
   if (!shippingAddressId) {
     throw new Error("Shipping address is required");
+  }
+
+  // ✅ Validate shipping address exists
+  const addressExists = await ShippingAddress.findById(shippingAddressId);
+  if (!addressExists) {
+    throw new Error("Invalid shipping address");
   }
 
   const order = await Order.create({
@@ -155,7 +162,7 @@ exports.confirmOrderReceived = async (orderId) => {
 exports.getAllOrders = async (filter = {}) => {
   return await Order.find(filter)
     .populate("user items.variantId")
-    .sort({ createdAt: -1 }); // ✅ Most recent first
+    .sort({ createdAt: -1 });
 };
 
 exports.getAllOrdersForUser = async (userId, orderNo, status, dateRange) => {

@@ -120,6 +120,15 @@ class AuthController {
     }
   }
 
+  static async getWalletBalance(req, res) {
+    try {
+      const result = await AuthService.getUserWallet(req.user._id);
+      res.status(200).json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+
   static async verifyUser(req, res) {
     try {
       const { code } = req.body;

@@ -216,6 +216,13 @@ class AuthService {
     };
   }
 
+  static async getUserWallet(userId) {
+    const user = await User.findById(userId).select("wallet");
+    if (!user) throw new Error("User not found");
+
+    return { wallet: user.wallet };
+  }
+
   static async requestPasswordReset(email) {
     try {
       const user = await User.findOne({ email });

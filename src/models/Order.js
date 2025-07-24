@@ -12,7 +12,7 @@ const OrderSchema = new mongoose.Schema(
 
     shippingAddress: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ShippingAddress", // ✅ Reference the ShippingAddress model
+      ref: "ShippingAddress",
       required: true,
     },
 

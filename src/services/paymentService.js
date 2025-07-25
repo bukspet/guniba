@@ -115,8 +115,6 @@ exports.verifyAndCompletePaystackPayment = async (reference) => {
   // ✅ Verify Paystack transaction
   const verified = await verifyPaystackPayment(reference);
 
-  console.log(verified, "ver");
-
   if (verified.status !== "success") {
     payment.status = "failed";
     await payment.save();

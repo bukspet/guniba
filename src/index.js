@@ -68,7 +68,7 @@ app.use(
 // Routes
 app.use("/api/auth", authRoutes);
 
-app.use("api/users", userRoutes);
+app.use("/api/users", userRoutes);
 
 app.use("/api/mlm", mlmRoutes);
 app.use("/api/orders", orderRoutes);
@@ -86,6 +86,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/referrals", referralRoutes);
 app.use("/api", shippingAddressRoutes);
 app.use("/api/notifications", notificationRoutes);
+
 app.use("/api/searched-words", searchedWordRoutes);
 
 // Start server after DB connects

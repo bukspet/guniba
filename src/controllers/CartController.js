@@ -24,8 +24,6 @@ const addToCartController = async (req, res) => {
       shippingCost = 0,
     } = req.body;
 
-    console.log("Incoming body:", req.body);
-
     // ✅ Basic validation
     if (!variantId || !productId || !quantity || !price) {
       return res.status(400).json({

@@ -36,10 +36,10 @@ exports.createOrder = async (
     orderNo: generateOrderNo(),
     shippingAddress: shippingAddressId,
   });
-
+  console.log(userId, "gh");
   // Notifications
   await notificationService.createNotification({
-    userId: null,
+    userId: userId,
     title: "New Order Created",
     message: `A new order has been placed (Order No: ${order.orderNo}).`,
     forAdmin: true,

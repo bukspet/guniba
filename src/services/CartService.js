@@ -9,29 +9,50 @@ const addToCart = async (
   userId,
   { variantId, productId, quantity, price, shippingCost = 0 }
 ) => {
-  console.log(price, "red");
+  // Convert IDs to ObjectId for consistency
+  const variantObjectId = new mongoose.Types.ObjectId(variantId);
+  const productObjectId = new mongoose.Types.ObjectId(productId);
+
   let cart = await Cart.findOne({ userId });
+  let message;
 
   if (!cart) {
     cart = await Cart.create({
       userId,
-      items: [{ variantId, productId, quantity, price, shippingCost }],
+      items: [
+        {
+          variantId: variantObjectId,
+          productId: productObjectId,
+          quantity,
+          price,
+          shippingCost,
+        },
+      ],
     });
+    message = "Item added to cart";
   } else {
     const existingItem = cart.items.find(
-      (item) => item.variantId.toString() === variantId.toString()
+      (item) => item.variantId.toString() === variantObjectId.toString()
     );
 
     if (existingItem) {
-      existingItem.quantity += quantity;
+      existingItem.quantity += quantity; // ✅ Increase quantity instead of adding duplicate
+      message = "Item quantity updated";
     } else {
-      cart.items.push({ variantId, productId, quantity, price, shippingCost });
+      cart.items.push({
+        variantId: variantObjectId,
+        productId: productObjectId,
+        quantity,
+        price,
+        shippingCost,
+      });
+      message = "Item added to cart";
     }
 
     await cart.save();
   }
 
-  return cart;
+  return { cart, message };
 };
 
 const updateQuantity = async (userId, variantId, action) => {

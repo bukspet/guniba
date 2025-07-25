@@ -2,13 +2,15 @@ const notificationService = require("../services/notificationService");
 
 exports.getMyNotifications = async (req, res) => {
   try {
-    const userId = req.user._id; // Assuming auth middleware
+    console.log("Fetching notifications for user:", req.user._id);
     const notifications = await notificationService.getUserNotifications(
-      userId
+      req.user._id
     );
-    res.json(notifications);
+    console.log("Notifications fetched:", notifications.length);
+    return res.json(notifications);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error in getMyNotifications:", err);
+    return res.status(500).json({ error: err.message });
   }
 };
 

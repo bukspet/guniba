@@ -1,7 +1,5 @@
 const Notification = require("../models/Notification");
-// const { sendRealTimeNotification } = require("../utils/socketManager");
 
-// Save notification + emit event
 exports.createNotification = async ({
   userId,
   title,
@@ -14,13 +12,6 @@ exports.createNotification = async ({
     message,
     forAdmin,
   });
-
-  // Send real-time notification
-  // sendRealTimeNotification({
-  //   userId,
-  //   forAdmin,
-  //   notification,
-  // });
 
   return notification;
 };

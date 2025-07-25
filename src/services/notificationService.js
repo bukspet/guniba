@@ -26,11 +26,16 @@ exports.markAsRead = async (notificationId) => {
 };
 
 // Get user notifications
+// Get user notifications with user details
 exports.getUserNotifications = async (userId) => {
-  return Notification.find({ userId }).sort({ createdAt: -1 });
+  return Notification.find({ userId })
+    .sort({ createdAt: -1 })
+    .populate("userId", "name email"); // Only populate selected fields
 };
 
-// Get admin notifications
+// Get admin notifications with user details (if any)
 exports.getAdminNotifications = async () => {
-  return Notification.find({ forAdmin: true }).sort({ createdAt: -1 });
+  return Notification.find({ forAdmin: true })
+    .sort({ createdAt: -1 })
+    .populate("userId", "name email");
 };

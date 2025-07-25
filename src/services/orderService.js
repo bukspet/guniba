@@ -62,8 +62,6 @@ exports.updateMultipleOrderStatus = async (orderIds, status) => {
     throw new Error("No valid Order IDs provided.");
   }
 
-  const updatedOrders = [];
-
   for (const id of validIds) {
     const order = await Order.findById(id);
     if (!order) continue;

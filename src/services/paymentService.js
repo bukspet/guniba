@@ -14,8 +14,6 @@ exports.initiateWalletPayment = async (userId, items, shippingAddress) => {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  console.log("User:", userId, "Items:", items, "Shipping:", shippingAddress);
-
   // ✅ Calculate total price with 10% tax
   const totalPrice =
     items.reduce((sum, item) => sum + item.price * item.quantity, 0) * 1.1;
@@ -36,6 +34,7 @@ exports.initiateWalletPayment = async (userId, items, shippingAddress) => {
     method: "wallet",
     status: "successful",
     reference,
+    shippingAddress,
     items: items.map((item) => ({
       id: item.variantId,
       price: item.price,

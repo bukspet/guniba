@@ -30,12 +30,12 @@ exports.markAsRead = async (notificationId) => {
 exports.getUserNotifications = async (userId) => {
   return Notification.find({ userId })
     .sort({ createdAt: -1 })
-    .populate("userId", "name email"); // Only populate selected fields
+    .populate("userId", "fullName email"); // Only populate selected fields
 };
 
 // Get admin notifications with user details (if any)
 exports.getAdminNotifications = async () => {
   return Notification.find({ forAdmin: true })
     .sort({ createdAt: -1 })
-    .populate("userId", "name email");
+    .populate("userId", "fullName email");
 };

@@ -80,8 +80,9 @@ exports.withdrawToBank = async (userId, amount, payoutCardId, io) => {
   // Notify admin
   await createNotification(
     {
-      title: "New Order",
+      title: "New Withdrawal Request",
       message: "A new order was placed.",
+      type: "request",
       forAdmin: true,
     },
     sendRealTimeNotification

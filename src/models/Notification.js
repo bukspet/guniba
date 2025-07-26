@@ -8,6 +8,11 @@ const NotificationSchema = new mongoose.Schema({
   }, // null = for admin or global
   title: { type: String, required: true },
   message: { type: String, required: true },
+  type: {
+    type: String,
+    enum: ["order", "request", "auth"], // Allowed values
+    required: true,
+  },
   forAdmin: { type: Boolean, default: false },
   read: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },

@@ -43,6 +43,7 @@ exports.createOrder = async (
     title: "New Order Created",
     message: `A new order has been placed (Order No: ${order.orderNo}).`,
     forAdmin: true,
+    type: "order",
   });
 
   await notificationService.createNotification({
@@ -50,6 +51,7 @@ exports.createOrder = async (
     title: "Order Created",
     message: "Your order was successfully created.",
     forAdmin: false,
+    type: "order",
   });
 
   return order;
@@ -87,6 +89,7 @@ exports.updateMultipleOrderStatus = async (orderIds, status) => {
       title: `Order ${status}`,
       message: `Your order (Order No: ${order.orderNo}) is now ${status}.`,
       forAdmin: false,
+      type: "order",
     });
 
     updatedOrders.push(order);
@@ -149,6 +152,7 @@ exports.confirmOrderReceived = async (orderId) => {
     title: "Order Completed",
     message: `Your order (Order No: ${order.orderNo}) has been marked as completed.`,
     forAdmin: false,
+    type: "order",
   });
 
   return {

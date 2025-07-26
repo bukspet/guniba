@@ -3,7 +3,8 @@ const notificationService = require("../services/notificationService");
 exports.getMyNotifications = async (req, res) => {
   try {
     const notifications = await notificationService.getUserNotifications(
-      req.user._id
+      req.user._id, // userId
+      req.query // query
     );
 
     return res.json(notifications);
@@ -14,10 +15,22 @@ exports.getMyNotifications = async (req, res) => {
 
 exports.getAdminNotifications = async (req, res) => {
   try {
-    const notifications = await notificationService.getAdminNotifications();
-    res.json(notifications);
+    const { type, read } = req.query;
+
+    const filters = {
+      forAdmin: true,
+    };
+
+    if (type) filters.type = type;
+    if (read !== undefined) filters.read = read === "true";
+
+    const notifications = await notificationService.getAdminNotifications(
+      filters
+    );
+
+    return res.json(notifications);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 };
 

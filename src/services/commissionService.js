@@ -1,6 +1,6 @@
 const Commission = require("../models/Commission");
 const User = require("../models/User");
-
+const notificationService = require("./notificationService");
 const WithdrawalRequest = require("../models/WithdrawalRequest");
 const PayoutCard = require("../models/PayoutCard");
 
@@ -77,11 +77,11 @@ exports.withdrawToBank = async (userId, amount, payoutCardId, io) => {
     status: "pending",
   });
 
-  // Notify admin
-  await createNotification(
+  await notificationService.createNotification(
     {
+      userId,
       title: "New Withdrawal Request",
-      message: "A new order was placed.",
+      message: "A new withdrawal Request was placed.",
       type: "request",
       forAdmin: true,
     },

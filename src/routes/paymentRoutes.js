@@ -15,4 +15,13 @@ router.post(
 // Verify Paystack payment (after callback)
 router.get("/verify", paymentController.verifyPaystack);
 
+router.post(
+  "/cinetpay",
+  authMiddleware,
+  paymentController.createCinetpayPayment
+);
+
+// Verify CinetPay payment
+router.get("/cinetpay/verify", paymentController.verifyCinetpay);
+
 module.exports = router;

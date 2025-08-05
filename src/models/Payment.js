@@ -13,7 +13,7 @@ const PaymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   method: {
     type: String,
-    enum: ["wallet", "paystack", "cinetpay"],
+    enum: ["wallet", "paystack", "cinetpay", "seerbit"],
     required: true,
   },
   status: {

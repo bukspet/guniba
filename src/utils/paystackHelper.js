@@ -58,3 +58,40 @@ exports.verifyCinetpayPayment = async (transaction_id) => {
     throw new Error("CinetPay verification request failed");
   }
 };
+exports.getSeerbitToken = async () => {
+  try {
+    const response = await axios.post(
+      "https://seerbitapi.com/api/v2/encrypt/keys",
+      {
+        key: process.env.SEERBIT_PUBLIC_KEY, // your public key
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.SEERBIT_SECRET_KEY}`, // your secret key
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const token = response.data?.data?.EncryptedSecKey;
+    return token;
+  } catch (error) {
+    console.error("Token Error:", error.response?.data || error.message);
+    throw new Error("Failed to get Seerbit token");
+  }
+};
+
+exports.verifySeerbitPayment = async (reference) => {
+  const token = await exports.getSeerbitToken();
+
+  const res = await axios.get(
+    `https://seerbitapi.com/api/v2/transaction/query/${reference}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return res.data.data;
+};

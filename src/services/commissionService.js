@@ -51,7 +51,7 @@ exports.withdrawToWallet = async (userId, amount) => {
   };
 };
 
-exports.withdrawToBank = async (userId, amount, payoutCardId, io) => {
+exports.withdrawToBank = async (userId, amount, payoutCardId) => {
   const totalCommission = await this.getUserCommissionSummary(userId);
   if (amount > totalCommission)
     throw new Error("Insufficient commission balance");

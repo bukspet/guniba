@@ -23,5 +23,7 @@ router.post(
 
 // Verify CinetPay payment
 router.get("/cinetpay/verify", paymentController.verifyCinetpay);
+router.post("/seerbit", authMiddleware, paymentController.createSeerbitPayment);
+router.get("/seerbit/verify", paymentController.verifySeerbit);
 
 module.exports = router;

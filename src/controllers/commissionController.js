@@ -24,8 +24,10 @@ exports.getCommissionSummary = async (req, res) => {
 
 exports.transferCommissionToWallet = async (req, res) => {
   try {
-    const result = await commissionService.transferCommissionToWallet(
-      req.user._id
+    const { amount } = req.body;
+    const result = await commissionService.withdrawToWallet(
+      req.user._id,
+      amount
     );
     res.json(result);
   } catch (err) {
@@ -36,10 +38,12 @@ exports.transferCommissionToWallet = async (req, res) => {
 exports.withdrawCommissionToBank = async (req, res) => {
   try {
     const { amount, payoutCardId } = req.body;
+
+    console.log(amount, payoutCardId);
     if (!amount || !payoutCardId)
       return res.status(400).json({ error: "Missing required fields" });
 
-    const withdrawal = await commissionService.withdrawCommissionToBank(
+    const withdrawal = await commissionService.withdrawToBank(
       req.user._id,
       amount,
       payoutCardId

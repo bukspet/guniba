@@ -3,13 +3,20 @@ const User = require("../models/User");
 const Order = require("../models/Order");
 const redisClient = require("../config/redis"); // assuming you have a Redis config
 const { createOrder } = require("./orderService");
-const { verifyPaystackPayment } = require("../utils/paystackHelper");
+const {
+  verifyPaystackPayment,
+  getSeerbitToken,
+  verifySeerbitPayment,
+} = require("../utils/paystackHelper");
 const mongoose = require("mongoose");
 const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
+
 require("dotenv").config();
 const generateReference = () =>
   "PM" + Math.floor(1000000000 + Math.random() * 9000000000);
+const SEERBIT_PUBLIC_KEY = process.env.SEERBIT_PUBLIC_KEY;
+const SEERBIT_SECRET_KEY = process.env.SEERBIT_SECRET_KEY;
 
 exports.initiateWalletPayment = async (userId, items, shippingAddress) => {
   // ✅ Validate user
@@ -71,7 +78,7 @@ exports.initiatePaystackPayment = async (userId, items, shippingAddress) => {
   if (!items || items.length === 0) {
     throw new Error("Items are required");
   }
-  console.log("User:", userId, "Items:", items, "Shipping:", shippingAddress);
+
   if (!shippingAddress) {
     throw new Error("Shipping address is required");
   }
@@ -96,7 +103,7 @@ exports.initiatePaystackPayment = async (userId, items, shippingAddress) => {
       quantity: item.quantity,
     })),
   });
-  console.log("Payment created:", payment);
+
   return {
     reference,
     amount: Number(totalPrice.toFixed(2)),
@@ -200,8 +207,6 @@ exports.initiateCinetpayPayment = async (userId, items, shippingAddress) => {
     })),
   });
 
-  console.log("💾 Payment created:", reference);
-
   const firstName = user.name?.split(" ")[0] || "Customer";
   const lastName = user.name?.split(" ")[1] || "User";
   const email = user.email || "noemail@example.com";
@@ -257,4 +262,161 @@ exports.initiateCinetpayPayment = async (userId, items, shippingAddress) => {
     console.error("CinetPay API Error:", error.response?.data || error.message);
     throw new Error("Failed to initiate payment with CinetPay.");
   }
+};
+
+exports.initiateSeerbitPayment = async (
+  userId,
+  items,
+  shippingAddress,
+  userEmail,
+  userName
+) => {
+  if (!items || items.length === 0) throw new Error("Items are required");
+  if (!shippingAddress) throw new Error("Shipping address is required");
+
+  const totalPrice =
+    items.reduce((sum, item) => sum + item.price * item.quantity, 0) * 1.1;
+  const amount = Number(totalPrice.toFixed(2));
+  const reference = generateReference();
+
+  // Save payment record
+  const payment = await Payment.create({
+    user: userId,
+    amount,
+    method: "seerbit",
+    status: "pending",
+    reference,
+    shippingAddress,
+    items: items.map((item) => ({
+      id: item.variantId || item.id,
+      price: item.price,
+      quantity: item.quantity,
+    })),
+  });
+
+  // 🔐 Step 1: Get Encrypted Key
+  let encryptedKey;
+  try {
+    const encryptionRes = await axios.post(
+      "https://seerbitapi.com/api/v2/encrypt/keys",
+      {
+        key: `${SEERBIT_SECRET_KEY}.${SEERBIT_PUBLIC_KEY}`,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    encryptedKey = encryptionRes.data?.data?.EncryptedSecKey?.encryptedKey;
+
+    if (!encryptedKey) {
+      throw new Error("Encrypted key not returned from SeerBit.");
+    }
+  } catch (err) {
+    const message =
+      err.response?.data?.message ||
+      err.response?.data?.error ||
+      err.message ||
+      "Unknown error occurred while encrypting key";
+    throw new Error("SeerBit Token Error: " + message);
+  }
+
+  // 💳 Step 2: Initiate Payment with customization
+  const payload = {
+    publicKey: SEERBIT_PUBLIC_KEY,
+    amount: amount.toString(),
+    currency: "NGN",
+    country: "NG",
+    paymentReference: reference,
+    email: userEmail || "user@example.com",
+    fullName: userName || "John Doe",
+    redirectUrl: "https://guniba-client.vercel.app/payment/confirmation",
+    tokenize: "false",
+    callbackUrl: "https://guniba-client.vercel.app/api/payments/seerbit/verify",
+    customization: {
+      payment_method: ["card", "ussd", "account", "transfer"], // ✅ Active payment options
+      confetti: true,
+      theme: {
+        border_color: "000000",
+        background_color: "ffffff",
+        button_color: "000000",
+      },
+      logo: "https://guniba-client.vercel.app/logo.png", // replace with your logo URL
+    },
+  };
+
+  try {
+    const res = await axios.post(
+      "https://seerbitapi.com/api/v2/payments",
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${encryptedKey}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const checkoutLink = res.data?.data?.payments?.redirectLink;
+    if (!checkoutLink) {
+      throw new Error("Redirect link not found in SeerBit response.");
+    }
+
+    return {
+      reference,
+      amount,
+      paymentId: payment._id,
+      checkoutLink,
+      message: "Payment initialized. Complete payment via SeerBit.",
+    };
+  } catch (err) {
+    const message =
+      err?.response?.data?.message ||
+      err?.response?.data?.error ||
+      err.message ||
+      "Unknown error initiating payment";
+    throw new Error("Failed to initiate payment: " + message);
+  }
+};
+
+exports.verifyAndCompleteSeerbitPayment = async (reference) => {
+  const payment = await Payment.findOne({ reference });
+  if (!payment) throw new Error("Payment not found");
+
+  if (payment.status !== "pending") {
+    return { message: "Payment already processed", payment };
+  }
+
+  const result = await verifySeerbitPayment(reference);
+  if (result?.paymentStatus !== "SUCCESS") {
+    payment.status = "failed";
+    await payment.save();
+    throw new Error("Payment failed or not successful");
+  }
+
+  const items = payment.items.map((item) => ({
+    variantId: item.id,
+    quantity: item.quantity,
+    price: item.price,
+  }));
+
+  const order = await createOrder(
+    payment.user,
+    items,
+    payment.amount,
+    payment.method,
+    payment.shippingAddress
+  );
+
+  payment.status = "successful";
+  payment.order = order._id;
+  await payment.save();
+
+  return {
+    message: "Payment successful via Seerbit",
+    payment,
+    order,
+  };
 };

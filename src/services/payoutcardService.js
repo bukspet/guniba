@@ -1,11 +1,32 @@
 const PayoutCard = require("../models/PayoutCard");
 
-exports.createPayoutCard = async (data) => {
-  return await PayoutCard.create(data);
+exports.createPayoutCard = async ({
+  accountName,
+  accountNumber,
+  bank,
+  user,
+}) => {
+  console.log(
+    "Creating payout card for:",
+    accountName,
+    accountNumber,
+    bank,
+    user
+  );
+
+  return await PayoutCard.create({
+    accountName,
+    accountNumber,
+    bank,
+    user,
+  });
 };
 
 exports.updatePayoutCard = async (cardId, data) => {
-  return await PayoutCard.findByIdAndUpdate(cardId, data, { new: true });
+  return await PayoutCard.findByIdAndUpdate(cardId, data, {
+    new: true,
+    runValidators: true,
+  });
 };
 
 exports.deletePayoutCard = async (cardId) => {

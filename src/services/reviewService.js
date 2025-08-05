@@ -1,5 +1,4 @@
-const Review = require("../models/Product");
-const ReadyToReview = require("../models/Product");
+const { Review, ReadyToReview } = require("../models/Product");
 
 exports.createReview = async (data) => {
   const review = await Review.create(data);

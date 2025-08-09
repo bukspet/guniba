@@ -147,7 +147,7 @@ exports.confirmOrderReceived = async (orderId) => {
 
   // ✅ Calculate MLM commission
   await MLMService.calculateCommission(order.user, order.totalPrice, order._id);
-
+  console.log(order._id, order, "orderId 1");
   // ✅ Notify user
   await notificationService.createNotification({
     userId: order.user,

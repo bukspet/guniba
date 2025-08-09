@@ -60,6 +60,7 @@ app.use(
       "http://localhost:3000",
       "http://localhost:3001",
       "https://guniba-client.vercel.app",
+      "https://www.guniba.net",
     ],
     credentials: true,
   })

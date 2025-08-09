@@ -6,7 +6,6 @@ class MLMService {
   async calculateCommission(userId, purchaseAmount, orderId) {
     const user = await User.findById(userId);
     if (!user) return;
-
     // Update user sales and level
     user.totalSales += purchaseAmount;
     user.level = this.determineLevel(user.totalSales);
@@ -34,6 +33,7 @@ class MLMService {
       // Update referrer earnings
       if (commission > 0) {
         referrer.commissionEarned += commission;
+        referrer.commissionBalance += commission;
         await referrer.save();
 
         // Save commission record

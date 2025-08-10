@@ -5,30 +5,33 @@ exports.createPayoutCard = async ({
   accountNumber,
   bank,
   user,
+  isDefault,
 }) => {
-  console.log(
-    "Creating payout card for:",
-    accountName,
-    accountNumber,
-    bank,
-    user
-  );
+  if (isDefault) {
+    // Set all other cards for this user to not default
+    await PayoutCard.updateMany({ user }, { isDefault: false });
+  }
 
   return await PayoutCard.create({
     accountName,
     accountNumber,
     bank,
     user,
+    isDefault,
   });
 };
 
-exports.updatePayoutCard = async (cardId, data) => {
+exports.updatePayoutCard = async (cardId, data, userId) => {
+  if (data.isDefault) {
+    // Set all other cards for this user to not default
+    await PayoutCard.updateMany({ user: userId }, { isDefault: false });
+  }
+
   return await PayoutCard.findByIdAndUpdate(cardId, data, {
     new: true,
     runValidators: true,
   });
 };
-
 exports.deletePayoutCard = async (cardId) => {
   return await PayoutCard.findByIdAndDelete(cardId);
 };

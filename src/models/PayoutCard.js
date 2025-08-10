@@ -5,6 +5,10 @@ const PayoutCardSchema = new mongoose.Schema(
     accountName: String,
     accountNumber: String,
     bank: String,
+    isDefault: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );

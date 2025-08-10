@@ -3,6 +3,7 @@ const User = require("../models/User");
 const notificationService = require("./notificationService");
 const WithdrawalRequest = require("../models/WithdrawalRequest");
 const PayoutCard = require("../models/PayoutCard");
+const WalletTransaction = require("../models/WalletTransaction");
 
 function generateReference() {
   return "#" + Math.floor(100000 + Math.random() * 900000); // e.g. #123456

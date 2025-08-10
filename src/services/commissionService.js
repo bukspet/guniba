@@ -17,16 +17,20 @@ exports.getUserCommissions = async (userId) => {
 
 exports.getUserCommissionSummary = async (userId) => {
   const commissions = await Commission.find({ recipient: userId });
+
   const total = commissions.reduce((sum, item) => sum + item.amount, 0);
+  console.log(userId, total, "d");
   return total;
 };
 
 exports.withdrawToWallet = async (userId, amount) => {
   const user = await User.findById(userId);
-  const totalCommission = await this.getUserCommissionSummary(userId);
-
+  const totalCommission = await exports.getUserCommissionSummary(userId);
+  console.log(amount, totalCommission, "vv");
   if (amount > totalCommission)
     throw new Error("Insufficient commission balance");
+
+  console.log(amount, totalCommission, "vv");
   user.commissionBalance -= amount;
   user.wallet += amount;
   // const withdrawal = await WithdrawalRequest.create({
@@ -38,9 +42,9 @@ exports.withdrawToWallet = async (userId, amount) => {
   //   status: "pending", // processed later in admin flow
   // });
 
-  await WalletTransaction.create({
+  const withdrawal = await WalletTransaction.create({
     user: userId,
-    transactionId: generateTransactionId(),
+    transactionId: generateReference(),
     type: "withdrawal to Wallet",
     amount,
     status: "approved",
@@ -53,7 +57,7 @@ exports.withdrawToWallet = async (userId, amount) => {
 };
 
 exports.withdrawToBank = async (userId, amount, payoutCardId) => {
-  const totalCommission = await this.getUserCommissionSummary(userId);
+  const totalCommission = await exports.getUserCommissionSummary(userId);
   if (amount > totalCommission)
     throw new Error("Insufficient commission balance");
 

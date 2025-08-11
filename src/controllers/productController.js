@@ -1,5 +1,5 @@
 const productService = require("../services/productService");
-
+const localCache = require("../config/localCache");
 // ✅ Create a new product
 const createProduct = async (req, res) => {
   try {
@@ -64,21 +64,26 @@ const getProductWithVariants = async (req, res) => {
 const getAllProductsWithVariants = async (req, res) => {
   try {
     const { search, ...filters } = req.query;
-    console.log(
-      new Date(),
-      "Controller: Received request with search:",
-      search
-    );
+
+    // Build a unique cache key
+    const cacheKey = `products:${JSON.stringify(req.query)}`;
+
+    // 1. Check local in-memory cache
+    const cachedData = localCache.get(cacheKey);
+    if (cachedData) {
+      console.log("✅ Local cache hit for", cacheKey);
+      return res.status(200).json(cachedData);
+    }
+
+    console.log("❌ Local cache miss for", cacheKey);
+
+    // Prepare filters
     const priceFilter = {};
-    if (req.query.under) {
-      priceFilter.under = parseInt(req.query.under);
-    } else if (req.query.above) {
-      priceFilter.above = parseInt(req.query.above);
-    } else if (req.query.between) {
+    if (req.query.under) priceFilter.under = parseInt(req.query.under);
+    else if (req.query.above) priceFilter.above = parseInt(req.query.above);
+    else if (req.query.between) {
       const betweenValues = req.query.between.split(",").map(Number);
-      if (betweenValues.length === 2) {
-        priceFilter.between = betweenValues;
-      }
+      if (betweenValues.length === 2) priceFilter.between = betweenValues;
     }
 
     const ratingFilter = {};
@@ -91,6 +96,7 @@ const getAllProductsWithVariants = async (req, res) => {
       sort.price = req.query.sortPrice;
     }
 
+    // 2. Fetch from MongoDB
     const response = await productService.getAllProductsWithVariants(
       filters,
       search,
@@ -98,6 +104,12 @@ const getAllProductsWithVariants = async (req, res) => {
       ratingFilter,
       sort
     );
+
+    // 3. Save to cache for 5 minutes
+    if (response.success) {
+      localCache.set(cacheKey, response);
+    }
+
     res.status(response.success ? 200 : 500).json(response);
   } catch (error) {
     res.status(500).json({

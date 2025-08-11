@@ -11,7 +11,7 @@ class ShippingAddressController {
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
-  }
+  } ////////////////
 
   async update(req, res) {
     try {

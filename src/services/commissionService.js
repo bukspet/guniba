@@ -76,7 +76,7 @@ exports.withdrawToBank = async (userId, amount, payoutCardId) => {
 
   await WalletTransaction.create({
     user: userId,
-    transactionId: generateTransactionId(),
+    transactionId: generateReference(),
     type: "withdrawal to Bank",
     amount,
     status: "pending",

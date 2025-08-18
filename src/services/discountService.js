@@ -90,12 +90,16 @@ const changeStatus = async (id, status) => {
 };
 
 // Validate + apply code
+// services/discountService.js
+
 const applyDiscountIfApplicable = async (
   productId,
   categoryId,
   code = null
 ) => {
   const now = new Date();
+
+  // active discounts
   const filter = {
     status: "active",
     startDate: { $lte: now },
@@ -103,14 +107,24 @@ const applyDiscountIfApplicable = async (
   };
 
   const discounts = await Discount.find(filter);
-  return (
-    discounts.find((d) => {
-      if (d.method === "discountcode" && d.discountCode !== code) return false;
-      if (d.products.includes(productId)) return true;
-      if (d.categories.includes(categoryId)) return true;
-      return false;
-    }) || null
-  );
+
+  // find match
+  const discount = discounts.find((d) => {
+    // If it's code-based, check code
+    if (d.method === "discountcode" && d.code !== code) return false;
+
+    // check product
+    if (d.products.some((p) => p.toString() === productId?.toString()))
+      return true;
+
+    // check category
+    if (d.categories.some((c) => c.toString() === categoryId?.toString()))
+      return true;
+
+    return false;
+  });
+
+  return discount || null;
 };
 
 module.exports = {

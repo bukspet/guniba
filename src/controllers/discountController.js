@@ -82,11 +82,15 @@ exports.validateDiscountCode = async (req, res) => {
   try {
     const { code, productId, categoryId } = req.body;
 
-    const discount = await applyDiscountIfApplicable({
-      discountCode: code,
+    const discount = await applyDiscountIfApplicable(
       productId,
       categoryId,
-    });
+      code
+    );
+
+    if (!discount) {
+      return res.status(404).json({ success: false, valid: false });
+    }
 
     res.json({ success: true, data: discount });
   } catch (error) {

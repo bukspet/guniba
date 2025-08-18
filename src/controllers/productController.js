@@ -66,16 +66,16 @@ const getAllProductsWithVariants = async (req, res) => {
     const { search, ...filters } = req.query;
 
     // Build a unique cache key
-    const cacheKey = `products:${JSON.stringify(req.query)}`;
+    // const cacheKey = `products:${JSON.stringify(req.query)}`;
 
     // 1. Check local in-memory cache
-    const cachedData = localCache.get(cacheKey);
-    if (cachedData) {
-      console.log("✅ Local cache hit for", cacheKey);
-      return res.status(200).json(cachedData);
-    }
+    // const cachedData = localCache.get(cacheKey);
+    // if (cachedData) {
+    //   console.log("✅ Local cache hit for", cacheKey);
+    //   return res.status(200).json(cachedData);
+    // }
 
-    console.log("❌ Local cache miss for", cacheKey);
+    // console.log("❌ Local cache miss for", cacheKey);
 
     // Prepare filters
     const priceFilter = {};
@@ -106,9 +106,9 @@ const getAllProductsWithVariants = async (req, res) => {
     );
 
     // 3. Save to cache for 5 minutes
-    if (response.success) {
-      localCache.set(cacheKey, response);
-    }
+    // if (response.success) {
+    //   localCache.set(cacheKey, response);
+    // }
 
     res.status(response.success ? 200 : 500).json(response);
   } catch (error) {

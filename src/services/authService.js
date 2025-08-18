@@ -1,5 +1,6 @@
 const User = require("../models/User.js");
 const jwt = require("jsonwebtoken");
+const parser = require("ua-parser-js");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { generateReferralCode } = require("../utils/referralUtils.js");
@@ -98,48 +99,54 @@ class AuthService {
       };
     }
   }
-  static async signin({ email, password }) {
+  static async signin({ email, password, req }) {
     try {
-      const user = await User.findOne({ email });
+      const ip =
+        req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+        req.socket.remoteAddress;
 
-      if (!user) {
+      const ua = parser(req.headers["user-agent"]);
+      const device = `${ua.browser?.name || "Unknown Browser"} on ${
+        ua.os?.name || "Unknown OS"
+      } ${ua.device?.type || "computer"}`;
+
+      const user = await User.findOne({ email });
+      if (!user)
         return {
           success: false,
           message: "Invalid email or password",
           data: null,
         };
-      }
 
       const isPasswordValid = await bcrypt.compare(password, user.password);
-
-      if (!isPasswordValid) {
+      if (!isPasswordValid)
         return {
           success: false,
           message: "Invalid email or password",
           data: null,
         };
-      }
 
-      // Generate tokens
       const { accessToken, refreshToken } = generateTokens(
         user._id,
         user.role,
         "both"
       );
 
-      // Convert Mongoose user to plain object and remove password
+      user.lastActivity = {
+        date: new Date(),
+        ip,
+        location: "Lagos, Nigeria",
+        device,
+      };
+      await user.save();
+
       const userObj = user.toObject();
       delete userObj.password;
 
-      // Add tokens
       return {
         success: true,
         message: "Signin successful",
-        data: {
-          ...userObj,
-          accessToken,
-          refreshToken,
-        },
+        data: { ...userObj, accessToken, refreshToken },
       };
     } catch (error) {
       console.error("Signin Error:", error);

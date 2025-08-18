@@ -27,7 +27,7 @@ class AuthController {
     try {
       const { email, password } = req.body;
 
-      const result = await AuthService.signin({ email, password });
+      const result = await AuthService.signin({ email, password, req });
 
       if (!result.success) {
         return res.status(401).json(result);

@@ -2,11 +2,13 @@ const commissionService = require("../services/commissionService");
 
 exports.getUserCommissions = async (req, res) => {
   try {
+    const { userId } = req.body;
     const commissions = await commissionService.getUserCommissions(
-      req.user._id
+      // req.user._id
+
+      userId
     );
 
-    console.log(commissions, "check");
     res.json(commissions);
   } catch (err) {
     res.status(500).json({ error: err.message });

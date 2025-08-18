@@ -53,8 +53,12 @@ exports.getAllOrdersController = async (req, res) => {
 exports.getUserOrdersController = async (req, res) => {
   try {
     const { orderNo, status, dateRange } = req.query;
+
+    const { userId } = req.body;
     const orders = await orderService.getAllOrdersForUser(
-      req.user._id,
+      // req.user._id,
+
+      userId,
       orderNo,
       status,
       dateRange

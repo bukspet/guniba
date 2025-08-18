@@ -60,17 +60,28 @@ const userSchema = new mongoose.Schema(
       default: "active",
     },
     lastActivity: {
-      type: Date,
-      default: Date.now,
+      date: {
+        type: Date,
+        default: Date.now,
+      },
+      ip: {
+        type: String,
+      },
+      location: {
+        type: String,
+      },
+      device: {
+        type: String,
+      },
     },
     role: {
       type: String,
-      enum: ["user", "admin"], // Define role options
-      default: "user", // Default role is "user"
+      enum: ["user", "admin"],
+      default: "user",
     },
-    totalSales: { type: Number, default: 0 }, // Tracks user and downline purchases
+    totalSales: { type: Number, default: 0 },
     commissionEarned: { type: Number, default: 0 },
-    commissionBalance: { type: Number, default: 0 },
+    auth: { type: Number, default: 0 },
     wallet: { type: Number, default: 0 },
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
   },

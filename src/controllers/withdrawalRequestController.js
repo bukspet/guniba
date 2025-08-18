@@ -11,7 +11,7 @@ exports.getAllWithdrawalRequestsController = async (req, res) => {
 
 exports.getUserWithdrawalRequestsController = async (req, res) => {
   try {
-    const userId = req.user._id; // Assuming authMiddleware sets req.user
+    const { userId } = req.body;
     const requests = await withdrawalRequestService.getUserWithdrawalRequests(
       userId
     );

@@ -4,7 +4,7 @@ const Discount = require("../models/Discount.js");
 const createDiscount = async (data) => {
   const discount = new Discount(data);
   await discount.save();
-
+  console.log(discount, data);
   // If status is active, ensure single toDisplay
   if (discount.status === "active") {
     await Discount.updateMany(
@@ -14,7 +14,7 @@ const createDiscount = async (data) => {
     discount.toDisplay = true;
     await discount.save();
   }
-
+  console.log(discount, "here");
   return discount;
 };
 

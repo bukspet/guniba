@@ -16,23 +16,23 @@ exports.createReview = async (data) => {
 exports.getReviews = async (filter = {}) => {
   return await Review.find(filter)
     .populate("userId", "fullName email")
-    .populate("productId", "name")
-    .populate("variantId", "name")
+    .populate("productId")
+    .populate("variantId")
     .sort({ createdAt: -1 });
 };
 
 exports.getReviewById = async (reviewId) => {
   const review = await Review.findById(reviewId)
     .populate("userId", "fullName email")
-    .populate("productId", "name")
-    .populate("variantId", "name");
+    .populate("productId")
+    .populate("variantId");
   if (!review) throw new Error("Review not found");
   return review;
 };
 exports.getReadyToReviewForUser = async (userId) => {
   const records = await ReadyToReview.find({ userId })
-    .populate("productId", "name")
-    .populate("variantId", "name")
+    .populate("productId")
+    .populate("variantId")
     .populate("orderId", "status createdAt");
 
   return records;

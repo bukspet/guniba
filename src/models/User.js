@@ -81,6 +81,7 @@ const userSchema = new mongoose.Schema(
     },
     totalSales: { type: Number, default: 0 },
     commissionEarned: { type: Number, default: 0 },
+    commissionBalance: { type: Number, default: 0 },
     auth: { type: Number, default: 0 },
     wallet: { type: Number, default: 0 },
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],

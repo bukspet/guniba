@@ -25,23 +25,19 @@ exports.getUserCommissionSummary = async (userId) => {
 
 exports.withdrawToWallet = async (userId, amount) => {
   const user = await User.findById(userId);
-  const totalCommission = await exports.getUserCommissionSummary(userId);
-  console.log(amount, totalCommission, "vv");
-  if (amount > totalCommission)
-    throw new Error("Insufficient commission balance");
+  if (!user) throw new Error("User not found");
 
-  console.log(amount, totalCommission, "vv");
+  // Check available balance
+  if (amount > user.commissionBalance) {
+    throw new Error("Insufficient commission balance");
+  }
+
+  // Deduct commission and increase wallet
   user.commissionBalance -= amount;
   user.wallet += amount;
-  // const withdrawal = await WithdrawalRequest.create({
-  //   reference: generateReference(),
-  //   user: userId,
-  //   amount,
-  //   source: "commission",
-  //   withdrawalType: "wallet",
-  //   status: "pending", // processed later in admin flow
-  // });
+  await user.save();
 
+  // Log transaction
   const withdrawal = await WalletTransaction.create({
     user: userId,
     transactionId: generateReference(),
@@ -51,21 +47,30 @@ exports.withdrawToWallet = async (userId, amount) => {
   });
 
   return {
-    message: "Withdrawal to wallet requested",
+    message: "Withdrawal to wallet successful",
     withdrawal,
   };
 };
 
 exports.withdrawToBank = async (userId, amount, payoutCardId) => {
+  // Step 1: Check commission balance
   const totalCommission = await exports.getUserCommissionSummary(userId);
-  if (amount > totalCommission)
+  if (amount > totalCommission) {
     throw new Error("Insufficient commission balance");
+  }
 
+  // Step 2: Validate payout card
   const card = await PayoutCard.findOne({ _id: payoutCardId, user: userId });
-  if (!card) throw new Error("Invalid payout card");
+  if (!card) {
+    throw new Error("Invalid payout card");
+  }
 
+  // Generate a single reference for consistency
+  const reference = generateReference();
+
+  // Step 3: Create withdrawal + wallet transaction (atomic if using mongoose transaction)
   const withdrawal = await WithdrawalRequest.create({
-    reference: generateReference(),
+    reference,
     user: userId,
     amount,
     source: "commission",
@@ -76,25 +81,28 @@ exports.withdrawToBank = async (userId, amount, payoutCardId) => {
 
   await WalletTransaction.create({
     user: userId,
-    transactionId: generateReference(),
+    transactionId: reference,
     type: "withdrawal to Bank",
     amount,
     status: "pending",
   });
 
+  // Step 4: Notify admin
   await notificationService.createNotification(
     {
       userId,
       title: "New Withdrawal Request",
-      message: "A new withdrawal Request was placed.",
+      message: "A new withdrawal request was placed.",
       type: "request",
       forAdmin: true,
     },
     sendRealTimeNotification
   );
 
+  // Final return
   return {
-    message: "Withdrawal request to bank created",
+    success: true,
+    message: "Withdrawal request to bank created successfully",
     withdrawal,
   };
 };

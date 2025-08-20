@@ -13,7 +13,7 @@ router.get(
 
 // User: Get own withdrawal requests
 router.get(
-  "/user",
+  "/user/:userId",
   authMiddleware,
   WithdrawalController.getUserWithdrawalRequestsController
 );

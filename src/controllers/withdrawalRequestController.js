@@ -11,7 +11,7 @@ exports.getAllWithdrawalRequestsController = async (req, res) => {
 
 exports.getUserWithdrawalRequestsController = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const { userId } = req.params;
     const requests = await withdrawalRequestService.getUserWithdrawalRequests(
       userId
     );

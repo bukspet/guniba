@@ -11,7 +11,11 @@ router.post(
   OrderController.createOrderController
 );
 router.get("/", OrderController.getAllOrdersController);
-router.get("/user", authMiddleware, OrderController.getUserOrdersController);
+router.get(
+  "/user/:userId",
+  authMiddleware,
+  OrderController.getUserOrdersController
+);
 
 router.get(
   "/summary",

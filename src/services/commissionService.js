@@ -54,8 +54,9 @@ exports.withdrawToWallet = async (userId, amount) => {
 
 exports.withdrawToBank = async (userId, amount, payoutCardId) => {
   // Step 1: Check commission balance
+  const user = await User.findById(userId);
   const totalCommission = await exports.getUserCommissionSummary(userId);
-  if (amount > totalCommission) {
+  if (amount > user.commissionBalance) {
     throw new Error("Insufficient commission balance");
   }
 
@@ -69,13 +70,13 @@ exports.withdrawToBank = async (userId, amount, payoutCardId) => {
   const reference = generateReference();
 
   // Step 3: Create withdrawal + wallet transaction (atomic if using mongoose transaction)
+
   const withdrawal = await WithdrawalRequest.create({
-    reference,
+    requestId: reference,
     user: userId,
     amount,
     source: "commission",
     payoutCard: payoutCardId,
-    withdrawalType: "bank",
     status: "pending",
   });
 
@@ -88,16 +89,13 @@ exports.withdrawToBank = async (userId, amount, payoutCardId) => {
   });
 
   // Step 4: Notify admin
-  await notificationService.createNotification(
-    {
-      userId,
-      title: "New Withdrawal Request",
-      message: "A new withdrawal request was placed.",
-      type: "request",
-      forAdmin: true,
-    },
-    sendRealTimeNotification
-  );
+  await notificationService.createNotification({
+    userId,
+    title: "New Withdrawal Request",
+    message: "A new withdrawal request was placed.",
+    type: "request",
+    forAdmin: true,
+  });
 
   // Final return
   return {

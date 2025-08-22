@@ -27,9 +27,7 @@ exports.updateWithdrawalRequestStatus = async (requestId, newStatus) => {
       throw new Error("Insufficient commission balance at approval time");
     }
 
-    if (request.withdrawalType === "bank") {
-      user.commissionBalance -= amount;
-    }
+    user.commissionBalance -= amount;
 
     await user.save();
   }

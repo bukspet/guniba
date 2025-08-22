@@ -12,9 +12,11 @@ exports.getAllWithdrawalRequestsController = async (req, res) => {
 exports.getUserWithdrawalRequestsController = async (req, res) => {
   try {
     const { userId } = req.params;
+
     const requests = await withdrawalRequestService.getUserWithdrawalRequests(
       userId
     );
+
     res.json({ success: true, data: requests });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

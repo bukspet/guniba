@@ -4,7 +4,7 @@ async function sendOrderShippedEmail(email, order) {
   try {
     const sender = "Guniba <postmaster@mail.guniba.net>";
     const subject = `Your Order #${order.orderNo} Has Been Shipped`;
-
+    // ne
     const itemsList = order.items
       .map(
         (item) => `

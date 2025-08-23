@@ -17,11 +17,9 @@ const userSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      //   required: [true, "Phone number is required"],
     },
     avatar: {
       type: String,
-      //   required: [true, "Phone number is required"],
     },
     password: {
       type: String,

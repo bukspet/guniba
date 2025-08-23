@@ -6,6 +6,9 @@ const MLMService = require("./mlmService"); // Assuming this exists
 const notificationService = require("./notificationService");
 const { sendRealTimeNotification } = require("../utils/socketManager");
 const ShippingAddress = require("../models/ShippingAddress");
+const {
+  sendOrderCreatedEmail,
+} = require("../utils/emailservice/templates/orderEmail");
 
 const generateOrderNo = () => {
   return `GU-${Math.floor(100000000 + Math.random() * 900000000)}`;
@@ -22,7 +25,6 @@ exports.createOrder = async (
     throw new Error("Shipping address is required");
   }
 
-  // ✅ Validate shipping address exists
   const addressExists = await ShippingAddress.findById(shippingAddressId);
   if (!addressExists) {
     throw new Error("Invalid shipping address");
@@ -36,10 +38,10 @@ exports.createOrder = async (
     orderNo: generateOrderNo(),
     shippingAddress: shippingAddressId,
   });
-  console.log(userId, "gh");
-  // Notifications
+
+  // ✅ Notifications
   await notificationService.createNotification({
-    userId: userId,
+    userId,
     title: "New Order Created",
     message: `A new order has been placed (Order No: ${order.orderNo}).`,
     forAdmin: true,
@@ -54,6 +56,22 @@ exports.createOrder = async (
     type: "order",
   });
 
+  // // ✅ Send Email to User
+  // const user = await User.findById(userId).select("email");
+  // if (user?.email) {
+  //   const emailSent = await sendOrderCreatedEmail(user.email, order);
+
+  //   if (!emailSent || emailSent.message !== "Queued. Thank you.") {
+  //     console.error(
+  //       "❌ Failed to send order email for:",
+  //       user.email,
+  //       emailSent
+  //     );
+  //   } else {
+  //     console.log("✅ Order email sent to:", user.email);
+  //   }
+  // }
+
   return order;
 };
 
@@ -67,13 +85,28 @@ exports.updateMultipleOrderStatus = async (orderIds, status) => {
   const updatedOrders = [];
 
   for (const id of validIds) {
-    const order = await Order.findById(id);
+    const order = await Order.findById(id).populate("user", "email"); // ✅ populate user email
     if (!order) continue;
 
     order.status = status;
 
     if (status === "Shipped") {
       order.shippedAt = new Date();
+
+      // ✅ Send shipped email
+      // if (order.user?.email) {
+      //   const emailSent = await sendOrderShippedEmail(order.user.email, order);
+
+      //   if (!emailSent || emailSent.message !== "Queued. Thank you.") {
+      //     console.error(
+      //       "❌ Failed to send shipped email for:",
+      //       order.user.email,
+      //       emailSent
+      //     );
+      //   } else {
+      //     console.log("✅ Shipped email sent to:", order.user.email);
+      //   }
+      // }
     }
 
     if (status === "Return") {
@@ -87,14 +120,14 @@ exports.updateMultipleOrderStatus = async (orderIds, status) => {
     await order.save();
 
     await notificationService.createNotification({
-      userId: order.user,
+      userId: order.user._id || order.user,
       title: `Order ${status}`,
       message: `Your order (Order No: ${order.orderNo}) is now ${status}.`,
       forAdmin: false,
       type: "order",
     });
 
-    updatedOrders.push(order); // ✅ Now this works correctly
+    updatedOrders.push(order);
   }
 
   return updatedOrders;

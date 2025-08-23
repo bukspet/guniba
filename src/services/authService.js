@@ -4,6 +4,12 @@ const parser = require("ua-parser-js");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { generateReferralCode } = require("../utils/referralUtils.js");
+const {
+  generateRandomSixDigitCode,
+} = require("../utils/generateRandomSixDigitCode.js");
+const {
+  sendResetPasswordEmail,
+} = require("../utils/emailservice/templates/sendResetPasswordEmail.js");
 
 // const sendRealTimeNotification = (userId, notification) => {
 //   console.log(
@@ -236,7 +242,19 @@ class AuthService {
       if (!user) {
         return { success: false, message: "User not found.", data: null };
       }
-      const resetCode = crypto.randomBytes(20).toString("hex");
+      // const resetCode = crypto.randomBytes(20).toString("hex");
+
+      const resetCode = generateRandomSixDigitCode();
+
+      // const emailSent = await sendResetPasswordEmail(email, resetCode);
+
+      // if (!emailSent || emailSent.message !== "Queued. Thank you.") {
+      //   console.error("❌ Failed to send reset email for:", email, emailSent);
+      //   throw new Error("Reset email could not be sent");
+      // } else {
+      //   console.log("✅ V");
+      // }
+
       user.resetPasswordCode = resetCode;
       user.resetPasswordExpires = Date.now() + 3600000;
       await user.save();

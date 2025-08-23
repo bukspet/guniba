@@ -2,11 +2,8 @@ const commissionService = require("../services/commissionService");
 
 exports.getUserCommissions = async (req, res) => {
   try {
-    const { userId } = req.body;
     const commissions = await commissionService.getUserCommissions(
-      // req.user._id
-
-      userId
+      req.user._id
     );
 
     res.json(commissions);

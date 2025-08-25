@@ -25,7 +25,11 @@ class ReferralService {
         dateJoined: user.createdAt,
         generation,
         invitedBy: invitedByUser
-          ? { name: invitedByUser.fullName, email: invitedByUser.email }
+          ? {
+              name: invitedByUser.fullName,
+              email: invitedByUser.email,
+              avatar: invitedByUser.avatar,
+            }
           : null,
         status: user.status || "Active", // adjust if you have a different status logic
       });

@@ -12,14 +12,15 @@ function generateReference() {
 exports.getUserCommissions = async (userId) => {
   return await Commission.find({ recipient: userId })
     .populate("fromUser", "name email")
-    .populate("orderId", "orderNumber totalPrice");
+    .populate("orderId", "orderNumber totalPrice")
+    .sort({ createdAt: -1 });
 };
 
 exports.getUserCommissionSummary = async (userId) => {
   const commissions = await Commission.find({ recipient: userId });
 
   const total = commissions.reduce((sum, item) => sum + item.amount, 0);
-  console.log(userId, total, "d");
+
   return total;
 };
 

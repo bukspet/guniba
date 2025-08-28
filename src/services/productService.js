@@ -319,6 +319,8 @@ const getAllProductsWithVariants = async (
       ...priceQuery,
       ...ratingQuery,
       temporal: false,
+      // isDeleted: false,
+      isDeleted: { $ne: true },
     };
 
     let mongoSort = {};
@@ -372,7 +374,7 @@ const getAllProductsWithVariants = async (
           : [],
       })),
     }));
-
+    console.log(transformedProducts, products);
     return {
       success: true,
       message: "Products fetched successfully",
@@ -410,8 +412,12 @@ const updateProduct = async (productId, updateData) => {
 
 // 🟢 Delete a product and its variants
 const deleteProduct = async (productId) => {
-  await Variant.deleteMany({ productId }); // Delete related variants
-  return await Product.findByIdAndDelete(productId);
+  // Mark product as deleted instead of removing it
+  return await Product.findByIdAndUpdate(
+    productId,
+    { isDeleted: true },
+    { new: true }
+  );
 };
 
 // 🟢 Update a variant

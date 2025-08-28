@@ -70,6 +70,8 @@ const productSchema = new mongoose.Schema(
     productDetails: { type: String, default: null },
     keyInformation: { type: String, default: null },
     rating: { type: Number, default: 0, min: 0, max: 5 },
+
+    isDeleted: { type: Boolean, default: false },
     quantitySold: { type: Number, default: 0, min: 0 },
     variantTypes: [
       { type: mongoose.Schema.Types.ObjectId, ref: "VariantType" },

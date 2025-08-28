@@ -2,7 +2,7 @@ const WithdrawalRequest = require("../models/WithdrawalRequest");
 
 exports.getAllWithdrawalRequests = async () => {
   return WithdrawalRequest.find()
-    .populate("user payoutCard")
+    .populate("user payoutCard actionBy")
     .sort({ createdAt: -1 });
 };
 
@@ -12,7 +12,12 @@ exports.getUserWithdrawalRequests = async (userId) => {
     .sort({ createdAt: -1 });
 };
 
-exports.updateWithdrawalRequestStatus = async (requestId, newStatus) => {
+exports.updateWithdrawalRequestStatus = async (
+  requestId,
+  newStatus,
+  reasonForRejection,
+  actionBy
+) => {
   const request = await WithdrawalRequest.findById(requestId).populate("user");
   if (!request) throw new Error("Withdrawal request not found");
 
@@ -28,11 +33,15 @@ exports.updateWithdrawalRequestStatus = async (requestId, newStatus) => {
     }
 
     user.commissionBalance -= amount;
-
     await user.save();
   }
 
+  if (newStatus === "rejected") {
+    request.reasonForRejection = reasonForRejection; // save reason
+  }
+
   request.status = newStatus;
+  request.actionBy = actionBy;
   await request.save();
 
   return request;

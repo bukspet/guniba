@@ -26,7 +26,7 @@ exports.getUserWithdrawalRequestsController = async (req, res) => {
 exports.updateWithdrawalRequestStatusController = async (req, res) => {
   try {
     const { requestId } = req.params;
-    const { status } = req.body;
+    const { status, reasonForRejection, actionBy } = req.body;
 
     if (!status) {
       return res
@@ -34,11 +34,27 @@ exports.updateWithdrawalRequestStatusController = async (req, res) => {
         .json({ success: false, message: "Status is required" });
     }
 
+    if (!actionBy) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Admin id is required" });
+    }
+
+    if (status === "rejected" && !reasonForRejection) {
+      return res.status(400).json({
+        success: false,
+        message: "Reason for rejection is required when status is rejected",
+      });
+    }
+
     const updatedRequest =
       await withdrawalRequestService.updateWithdrawalRequestStatus(
         requestId,
-        status
+        status,
+        reasonForRejection,
+        actionBy
       );
+
     res.json({
       success: true,
       data: updatedRequest,

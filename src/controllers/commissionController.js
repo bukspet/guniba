@@ -17,7 +17,7 @@ exports.getCommissionSummary = async (req, res) => {
     const total = await commissionService.getUserCommissionSummary(
       req.user._id
     );
-    console.log(req.user._id, total, "dd");
+
     res.json({ total });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -246,14 +246,14 @@ class AuthService {
 
       const resetCode = generateRandomSixDigitCode();
 
-      // const emailSent = await sendResetPasswordEmail(email, resetCode);
+      const emailSent = await sendResetPasswordEmail(email, resetCode);
 
-      // if (!emailSent || emailSent.message !== "Queued. Thank you.") {
-      //   console.error("❌ Failed to send reset email for:", email, emailSent);
-      //   throw new Error("Reset email could not be sent");
-      // } else {
-      //   console.log("✅ V");
-      // }
+      if (!emailSent || emailSent.message !== "Queued. Thank you.") {
+        console.error("❌ Failed to send reset email for:", email, emailSent);
+        throw new Error("Reset email could not be sent");
+      } else {
+        console.log("✅ V");
+      }
 
       user.resetPasswordCode = resetCode;
       user.resetPasswordExpires = Date.now() + 3600000;

@@ -1,12 +1,18 @@
 const FormData = require("form-data");
 const Mailgun = require("mailgun.js");
-require("dotenv").config(); // Load environment variables
+require("dotenv").config();
 
 const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
-const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || "mail.clufo.ch";
+const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
 
 async function sendEmail({ sender, recipient, subject, messageTemplate }) {
   try {
+    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
+      throw new Error(
+        "Missing Mailgun API key or domain in environment variables"
+      );
+    }
+
     const mailgun = new Mailgun(FormData);
     const mg = mailgun.client({
       username: "api",

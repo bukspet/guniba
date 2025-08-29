@@ -24,7 +24,7 @@ router.get(
 );
 router.get(
   "/admin-order-summary",
-  adminMiddleware,
+  // adminMiddleware,
   OrderController.getAdminOrderSummaryController
 );
 router.put(

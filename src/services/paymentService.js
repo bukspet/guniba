@@ -446,7 +446,7 @@ exports.initiateLigdicashPayment = async (
     method: "ligdicash",
     status: "pending",
     reference, // our internal reference
-    gatewayReference: null, // we will store ligdicash token after creation
+
     shippingAddress,
     items: items.map((i) => ({
       id: i.variantId || i.id,
@@ -545,7 +545,6 @@ exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
   // Confirm/Check
   const checkRef = payment.gatewayReference || payment.reference;
 
-  console.log(tokenOrExternalId);
   const confirmed = await confirmInvoice(checkRef);
 
   // Map Ligdicash statuses → your schema

@@ -73,8 +73,79 @@ exports.verifyPaystack = async (req, res) => {
   }
 };
 
-// controllers/paymentController.js
+exports.createLigdicashPayment = async (req, res) => {
+  try {
+    const { items, shippingAddress } = req.body;
 
+    if (!items || items.length === 0) {
+      return res.status(400).json({ error: "Items are required" });
+    }
+    if (!shippingAddress) {
+      return res.status(400).json({ error: "Shipping address is required" });
+    }
+
+    // Optionally pass user details for invoice
+    const userMeta = {
+      email: req.user?.email,
+      firstName: req.user?.firstName || req.user?.name?.split(" ")?.[0],
+      lastName:
+        req.user?.lastName || req.user?.name?.split(" ")?.slice(1).join(" "),
+    };
+
+    const result = await paymentService.initiateLigdicashPayment(
+      req.user._id,
+      items,
+      shippingAddress,
+      userMeta
+    );
+
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error("Ligdicash Payment Error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+// ✅ Verify Ligdicash Payment
+exports.verifyLigdicash = async (req, res) => {
+  try {
+    const { ref } = req.query;
+    if (!ref) {
+      return res.status(400).json({ error: "Payment reference is required" });
+    }
+
+    const result = await paymentService.verifyAndCompleteLigdicashPayment(ref);
+
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error("Verify Ligdicash Error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+// ✅ Webhook Callback from Ligdicash
+exports.ligdicashCallback = async (req, res) => {
+  try {
+    const token =
+      req.body?.token ||
+      req.body?.invoice?.token ||
+      req.body?.external_id ||
+      req.body?.commande?.invoice?.external_id ||
+      req.body?.custom_data?.order_id;
+
+    if (!token) {
+      console.warn("⚠️ Ligdicash callback missing token/external_id", req.body);
+      return res.status(200).json({ received: true });
+    }
+
+    await paymentService.verifyAndCompleteLigdicashPayment(token);
+
+    return res.status(200).json({ received: true });
+  } catch (err) {
+    console.error("Ligdicash Callback Error:", err);
+    return res.status(200).json({ received: true }); // still 200 so Ligdicash doesn’t retry forever
+  }
+};
 exports.createCinetpayPayment = async (req, res) => {
   try {
     const { items, shippingAddress } = req.body;

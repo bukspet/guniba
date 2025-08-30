@@ -319,7 +319,7 @@ const getAllProductsWithVariants = async (
       ...priceQuery,
       ...ratingQuery,
       temporal: false,
-      // isDeleted: false,
+      isDeleted: false,
       isDeleted: { $ne: true },
     };
 

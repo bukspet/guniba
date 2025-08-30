@@ -11,6 +11,7 @@ const {
 const mongoose = require("mongoose");
 const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
+const { createInvoice, confirmInvoice } = require("../utils/ligdicashHelper");
 
 require("dotenv").config();
 const generateReference = () =>
@@ -159,264 +160,436 @@ exports.verifyAndCompletePaystackPayment = async (reference) => {
   };
 };
 
-exports.initiateCinetpayPayment = async (userId, items, shippingAddress) => {
-  const API_KEY = process.env.CINETPAY_API_KEY;
-  const SITE_ID = process.env.CINETPAY_SITE_ID;
+// exports.initiateCinetpayPayment = async (userId, items, shippingAddress) => {
+//   const API_KEY = process.env.CINETPAY_API_KEY;
+//   const SITE_ID = process.env.CINETPAY_SITE_ID;
 
-  if (!API_KEY || !SITE_ID) {
-    console.error("CinetPay API_KEY or SITE_ID is missing");
-    throw new Error("Payment gateway configuration missing.");
-  }
+//   if (!API_KEY || !SITE_ID) {
+//     console.error("CinetPay API_KEY or SITE_ID is missing");
+//     throw new Error("Payment gateway configuration missing.");
+//   }
 
-  if (!Array.isArray(items) || items.length === 0) {
-    throw new Error("Items are required and must be a non-empty array");
-  }
+//   if (!Array.isArray(items) || items.length === 0) {
+//     throw new Error("Items are required and must be a non-empty array");
+//   }
 
-  if (
-    !shippingAddress ||
-    typeof shippingAddress !== "object" ||
-    Array.isArray(shippingAddress)
-  ) {
-    throw new Error("Shipping address is required and must be an object");
-  }
+//   if (
+//     !shippingAddress ||
+//     typeof shippingAddress !== "object" ||
+//     Array.isArray(shippingAddress)
+//   ) {
+//     throw new Error("Shipping address is required and must be an object");
+//   }
 
-  const user = await User.findById(userId);
-  if (!user) throw new Error("User not found");
+//   const user = await User.findById(userId);
+//   if (!user) throw new Error("User not found");
 
-  const totalAmount = items.reduce((sum, item) => {
-    const price = parseFloat(item.price || 0);
-    const quantity = parseInt(item.quantity || 1);
-    return sum + price * quantity;
-  }, 0);
+//   const totalAmount = items.reduce((sum, item) => {
+//     const price = parseFloat(item.price || 0);
+//     const quantity = parseInt(item.quantity || 1);
+//     return sum + price * quantity;
+//   }, 0);
 
-  const totalPrice = Math.round(totalAmount * 1.1); // 10% extra
-  const reference = generateReference();
+//   const totalPrice = Math.round(totalAmount * 1.1); // 10% extra
+//   const reference = generateReference();
 
-  // ✅ Create payment with normalized items
-  const payment = await Payment.create({
-    user: userId,
-    amount: totalPrice,
-    method: "cinetpay",
-    status: "pending",
-    reference,
-    shippingAddress,
-    items: items.map((item) => ({
-      id: item.variant, // ✅ Save under 'id' (refers to Variant in schema)
-      price: parseFloat(item.price),
-      quantity: parseInt(item.quantity),
-    })),
-  });
+//   // ✅ Create payment with normalized items
+//   const payment = await Payment.create({
+//     user: userId,
+//     amount: totalPrice,
+//     method: "cinetpay",
+//     status: "pending",
+//     reference,
+//     shippingAddress,
+//     items: items.map((item) => ({
+//       id: item.variant, // ✅ Save under 'id' (refers to Variant in schema)
+//       price: parseFloat(item.price),
+//       quantity: parseInt(item.quantity),
+//     })),
+//   });
 
-  const firstName = user.name?.split(" ")[0] || "Customer";
-  const lastName = user.name?.split(" ")[1] || "User";
-  const email = user.email || "noemail@example.com";
-  const phone = user.phone?.replace(/\D/g, "") || "0000000000";
+//   const firstName = user.name?.split(" ")[0] || "Customer";
+//   const lastName = user.name?.split(" ")[1] || "User";
+//   const email = user.email || "noemail@example.com";
+//   const phone = user.phone?.replace(/\D/g, "") || "0000000000";
 
-  const notifyUrl = `${process.env.API_BASE_URL}/api/payment/cinetpay/notify`;
-  const returnUrl = `${process.env.CLIENT_URL}/payment-verify`;
+//   const notifyUrl = `${process.env.API_BASE_URL}/api/payment/cinetpay/notify`;
+//   const returnUrl = `${process.env.CLIENT_URL}/payment-verify`;
 
-  const payload = {
-    apikey: API_KEY,
-    site_id: SITE_ID,
-    transaction_id: reference,
-    amount: totalPrice,
-    currency: "XOF",
-    description: "Order payment",
-    notify_url: notifyUrl,
-    return_url: returnUrl,
-    customer_name: firstName,
-    customer_surname: lastName,
-    customer_email: email,
-    customer_phone_number: phone,
-    lang: "en",
-    channels: "ALL",
-  };
+//   const payload = {
+//     apikey: API_KEY,
+//     site_id: SITE_ID,
+//     transaction_id: reference,
+//     amount: totalPrice,
+//     currency: "XOF",
+//     description: "Order payment",
+//     notify_url: notifyUrl,
+//     return_url: returnUrl,
+//     customer_name: firstName,
+//     customer_surname: lastName,
+//     customer_email: email,
+//     customer_phone_number: phone,
+//     lang: "en",
+//     channels: "ALL",
+//   };
 
-  console.log("🚀 CinetPay Payload:", payload);
+//   console.log("🚀 CinetPay Payload:", payload);
 
-  try {
-    const response = await axios.post(
-      "https://api-checkout.cinetpay.com/v2/payment",
-      payload,
-      { headers: { "Content-Type": "application/json" } }
-    );
+//   try {
+//     const response = await axios.post(
+//       "https://api-checkout.cinetpay.com/v2/payment",
+//       payload,
+//       { headers: { "Content-Type": "application/json" } }
+//     );
 
-    const data = response.data;
+//     const data = response.data;
 
-    if (!data || data.code !== "201") {
-      console.error("CinetPay error response:", data);
-      throw new Error(
-        `CinetPay Error: ${data.message || "Unknown error"} (code: ${
-          data.code
-        })`
-      );
-    }
+//     if (!data || data.code !== "201") {
+//       console.error("CinetPay error response:", data);
+//       throw new Error(
+//         `CinetPay Error: ${data.message || "Unknown error"} (code: ${
+//           data.code
+//         })`
+//       );
+//     }
 
-    return {
-      redirect_url: data.data.payment_url,
-      reference,
-      amount: totalPrice,
-      message: "Payment initialized. Complete payment on CinetPay.",
-    };
-  } catch (error) {
-    console.error("CinetPay API Error:", error.response?.data || error.message);
-    throw new Error("Failed to initiate payment with CinetPay.");
-  }
-};
+//     return {
+//       redirect_url: data.data.payment_url,
+//       reference,
+//       amount: totalPrice,
+//       message: "Payment initialized. Complete payment on CinetPay.",
+//     };
+//   } catch (error) {
+//     console.error("CinetPay API Error:", error.response?.data || error.message);
+//     throw new Error("Failed to initiate payment with CinetPay.");
+//   }
+// };
 
-exports.initiateSeerbitPayment = async (
+// exports.initiateSeerbitPayment = async (
+//   userId,
+//   items,
+//   shippingAddress,
+//   userEmail,
+//   userName
+// ) => {
+//   if (!items || items.length === 0) throw new Error("Items are required");
+//   if (!shippingAddress) throw new Error("Shipping address is required");
+
+//   const totalPrice =
+//     items.reduce((sum, item) => sum + item.price * item.quantity, 0) * 1.1;
+//   const amount = Number(totalPrice.toFixed(2));
+//   const reference = generateReference();
+
+//   // Save payment record
+//   const payment = await Payment.create({
+//     user: userId,
+//     amount,
+//     method: "seerbit",
+//     status: "pending",
+//     reference,
+//     shippingAddress,
+//     items: items.map((item) => ({
+//       id: item.variantId || item.id,
+//       price: item.price,
+//       quantity: item.quantity,
+//     })),
+//   });
+
+//   // 🔐 Step 1: Get Encrypted Key
+//   let encryptedKey;
+//   try {
+//     const encryptionRes = await axios.post(
+//       "https://seerbitapi.com/api/v2/encrypt/keys",
+//       {
+//         key: `${SEERBIT_SECRET_KEY}.${SEERBIT_PUBLIC_KEY}`,
+//       },
+//       {
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//       }
+//     );
+
+//     encryptedKey = encryptionRes.data?.data?.EncryptedSecKey?.encryptedKey;
+
+//     if (!encryptedKey) {
+//       throw new Error("Encrypted key not returned from SeerBit.");
+//     }
+//   } catch (err) {
+//     const message =
+//       err.response?.data?.message ||
+//       err.response?.data?.error ||
+//       err.message ||
+//       "Unknown error occurred while encrypting key";
+//     throw new Error("SeerBit Token Error: " + message);
+//   }
+
+//   // 💳 Step 2: Initiate Payment with customization
+//   const payload = {
+//     publicKey: SEERBIT_PUBLIC_KEY,
+//     amount: amount.toString(),
+//     currency: "NGN",
+//     country: "NG",
+//     paymentReference: reference,
+//     email: userEmail || "user@example.com",
+//     fullName: userName || "John Doe",
+//     redirectUrl: "https://guniba-client.vercel.app/payment/confirmation",
+//     tokenize: "false",
+//     callbackUrl: "https://guniba-client.vercel.app/api/payments/seerbit/verify",
+//     customization: {
+//       payment_method: ["card", "ussd", "account", "transfer"], // ✅ Active payment options
+//       confetti: true,
+//       theme: {
+//         border_color: "000000",
+//         background_color: "ffffff",
+//         button_color: "000000",
+//       },
+//       logo: "https://guniba-client.vercel.app/logo.png", // replace with your logo URL
+//     },
+//   };
+
+//   try {
+//     const res = await axios.post(
+//       "https://seerbitapi.com/api/v2/payments",
+//       payload,
+//       {
+//         headers: {
+//           Authorization: `Bearer ${encryptedKey}`,
+//           "Content-Type": "application/json",
+//         },
+//       }
+//     );
+
+//     const checkoutLink = res.data?.data?.payments?.redirectLink;
+//     if (!checkoutLink) {
+//       throw new Error("Redirect link not found in SeerBit response.");
+//     }
+
+//     return {
+//       reference,
+//       amount,
+//       paymentId: payment._id,
+//       checkoutLink,
+//       message: "Payment initialized. Complete payment via SeerBit.",
+//     };
+//   } catch (err) {
+//     const message =
+//       err?.response?.data?.message ||
+//       err?.response?.data?.error ||
+//       err.message ||
+//       "Unknown error initiating payment";
+//     throw new Error("Failed to initiate payment: " + message);
+//   }
+// };
+
+// exports.verifyAndCompleteSeerbitPayment = async (reference) => {
+//   const payment = await Payment.findOne({ reference });
+//   if (!payment) throw new Error("Payment not found");
+
+//   if (payment.status !== "pending") {
+//     return { message: "Payment already processed", payment };
+//   }
+
+//   const result = await verifySeerbitPayment(reference);
+//   if (result?.paymentStatus !== "SUCCESS") {
+//     payment.status = "failed";
+//     await payment.save();
+//     throw new Error("Payment failed or not successful");
+//   }
+
+//   const items = payment.items.map((item) => ({
+//     variantId: item.id,
+//     quantity: item.quantity,
+//     price: item.price,
+//   }));
+
+//   const order = await createOrder(
+//     payment.user,
+//     items,
+//     payment.amount,
+//     payment.method,
+//     payment.shippingAddress
+//   );
+
+//   payment.status = "successful";
+//   payment.order = order._id;
+//   await payment.save();
+
+//   return {
+//     message: "Payment successful via Seerbit",
+//     payment,
+//     order,
+//   };
+// };
+exports.initiateLigdicashPayment = async (
   userId,
   items,
   shippingAddress,
-  userEmail,
-  userName
+  userMeta = {}
 ) => {
-  if (!items || items.length === 0) throw new Error("Items are required");
+  if (!items?.length) throw new Error("Items are required");
   if (!shippingAddress) throw new Error("Shipping address is required");
 
-  const totalPrice =
-    items.reduce((sum, item) => sum + item.price * item.quantity, 0) * 1.1;
-  const amount = Number(totalPrice.toFixed(2));
-  const reference = generateReference();
+  // Compute totals (assumes prices are in XOF; if not, convert BEFORE calling this)
+  const subtotal = items.reduce(
+    (s, i) => s + Number(i.price) * Number(i.quantity),
+    0
+  );
+  const totalWithTax = Math.round(subtotal * 1.1); // 10% tax as in your Paystack flow
 
-  // Save payment record
+  const reference = generateReference("LDG");
+
+  // Save an initial payment row
   const payment = await Payment.create({
     user: userId,
-    amount,
-    method: "seerbit",
+    amount: totalWithTax,
+    method: "ligdicash",
     status: "pending",
-    reference,
+    reference, // our internal reference
+    gatewayReference: null, // we will store ligdicash token after creation
     shippingAddress,
-    items: items.map((item) => ({
-      id: item.variantId || item.id,
-      price: item.price,
-      quantity: item.quantity,
+    items: items.map((i) => ({
+      id: i.variantId || i.id,
+      price: i.price,
+      quantity: i.quantity,
     })),
   });
 
-  // 🔐 Step 1: Get Encrypted Key
-  let encryptedKey;
-  try {
-    const encryptionRes = await axios.post(
-      "https://seerbitapi.com/api/v2/encrypt/keys",
-      {
-        key: `${SEERBIT_SECRET_KEY}.${SEERBIT_PUBLIC_KEY}`,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    encryptedKey = encryptionRes.data?.data?.EncryptedSecKey?.encryptedKey;
-
-    if (!encryptedKey) {
-      throw new Error("Encrypted key not returned from SeerBit.");
-    }
-  } catch (err) {
-    const message =
-      err.response?.data?.message ||
-      err.response?.data?.error ||
-      err.message ||
-      "Unknown error occurred while encrypting key";
-    throw new Error("SeerBit Token Error: " + message);
-  }
-
-  // 💳 Step 2: Initiate Payment with customization
+  // Build Ligdicash invoice payload
   const payload = {
-    publicKey: SEERBIT_PUBLIC_KEY,
-    amount: amount.toString(),
-    currency: "NGN",
-    country: "NG",
-    paymentReference: reference,
-    email: userEmail || "user@example.com",
-    fullName: userName || "John Doe",
-    redirectUrl: "https://guniba-client.vercel.app/payment/confirmation",
-    tokenize: "false",
-    callbackUrl: "https://guniba-client.vercel.app/api/payments/seerbit/verify",
-    customization: {
-      payment_method: ["card", "ussd", "account", "transfer"], // ✅ Active payment options
-      confetti: true,
-      theme: {
-        border_color: "000000",
-        background_color: "ffffff",
-        button_color: "000000",
+    commande: {
+      invoice: {
+        items: items.map((i) => ({
+          name: i.name || "Item",
+          description: i.description || "",
+          quantity: Number(i.quantity),
+          unit_price: Number(i.price),
+          total_price: Number(i.price) * Number(i.quantity),
+        })),
+        total_amount: totalWithTax,
+        devise: "XOF",
+        description: userMeta.description || "Order payment",
+        customer: userMeta.customer || "", // optional phone/account id
+        customer_firstname: userMeta.firstName || "",
+        customer_lastname: userMeta.lastName || "",
+        customer_email: userMeta.email || "",
+        external_id: reference, // tie Ligdicash invoice to our ref
+        otp: "", // if you want OTP, set according to your setup
       },
-      logo: "https://guniba-client.vercel.app/logo.png", // replace with your logo URL
+      store: {
+        name: process.env.STORE_NAME || "Guniba",
+        website_url: process.env.STORE_URL || "https://www.guniba.net",
+      },
+      actions: {
+        cancel_url:
+          process.env.CANCEL_URL ||
+          "https://www.guniba.net/checkout/ligdicash/cancel",
+        return_url:
+          process.env.RETURN_URL ||
+          "https://www.guniba.net/checkout/ligdicash/return",
+        callback_url:
+          process.env.CALLBACK_URL ||
+          "https://www.guniba.net/payment/ligdicash/callback",
+      },
+      custom_data: {
+        order_id: reference,
+        transaction_id: reference,
+      },
     },
   };
 
-  try {
-    const res = await axios.post(
-      "https://seerbitapi.com/api/v2/payments",
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${encryptedKey}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+  // Create invoice in Ligdicash
+  const resp = await createInvoice(payload);
 
-    const checkoutLink = res.data?.data?.payments?.redirectLink;
-    if (!checkoutLink) {
-      throw new Error("Redirect link not found in SeerBit response.");
-    }
+  const paymentUrl = resp?.response_text;
+  const ligdiToken = resp?.token || null;
 
-    return {
-      reference,
-      amount,
-      paymentId: payment._id,
-      checkoutLink,
-      message: "Payment initialized. Complete payment via SeerBit.",
-    };
-  } catch (err) {
-    const message =
-      err?.response?.data?.message ||
-      err?.response?.data?.error ||
-      err.message ||
-      "Unknown error initiating payment";
-    throw new Error("Failed to initiate payment: " + message);
+  if (!paymentUrl) {
+    payment.status = "failed";
+    await payment.save();
+    throw new Error("Ligdicash did not return a payment URL");
   }
-};
 
-exports.verifyAndCompleteSeerbitPayment = async (reference) => {
-  const payment = await Payment.findOne({ reference });
+  // Store gateway token if provided
+  if (ligdioTken) {
+    payment.gatewayReference = ligdiToken;
+    await payment.save();
+  }
+
+  return {
+    reference,
+    amount: totalWithTax,
+    paymentId: payment._id,
+    paymentUrl, // Frontend should redirect here
+    ligdiToken,
+    message: "Ligdicash invoice created.",
+  };
+};
+/**
+ * Verify + complete:
+ * - Checks Ligdicash status
+ * - Creates order when paid
+ */
+exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
+  // We allow either our internal reference or Ligdicash token
+  const payment =
+    (await Payment.findOne({ reference: referenceOrToken })) ||
+    (await Payment.findOne({ gatewayReference: referenceOrToken }));
+
   if (!payment) throw new Error("Payment not found");
 
   if (payment.status !== "pending") {
     return { message: "Payment already processed", payment };
   }
 
-  const result = await verifySeerbitPayment(reference);
-  if (result?.paymentStatus !== "SUCCESS") {
-    payment.status = "failed";
+  // Confirm/Check
+  const checkRef = payment.gatewayReference || payment.reference;
+
+  console.log(tokenOrExternalId);
+  const confirmed = await confirmInvoice(checkRef);
+
+  // Map Ligdicash statuses → your schema
+  // Typical statuses: "pending", "completed"/"success", "canceled", "failed"
+  const status =
+    confirmed?.status ||
+    confirmed?.transaction_status ||
+    confirmed?.invoice_status ||
+    confirmed?.state;
+
+  if (!status) throw new Error("Unable to determine Ligdicash status");
+
+  const normalized = String(status).toLowerCase();
+
+  if (["completed", "success", "paid"].includes(normalized)) {
+    const items = payment.items.map((it) => ({
+      variantId: new mongoose.Types.ObjectId(
+        typeof it.id === "object" ? it.id._id : it.id
+      ),
+      quantity: it.quantity,
+      price: it.price,
+    }));
+
+    const order = await createOrder(
+      payment.user,
+      items,
+      payment.amount,
+      payment.method,
+      payment.shippingAddress
+    );
+
+    payment.order = order._id;
+    payment.status = "successful";
     await payment.save();
-    throw new Error("Payment failed or not successful");
+
+    return { message: "Payment successful via Ligdicash", payment, order };
   }
 
-  const items = payment.items.map((item) => ({
-    variantId: item.id,
-    quantity: item.quantity,
-    price: item.price,
-  }));
+  if (["canceled", "cancelled", "failed", "expired"].includes(normalized)) {
+    payment.status = "failed";
+    await payment.save();
+    throw new Error(`Payment ${normalized}`);
+  }
 
-  const order = await createOrder(
-    payment.user,
-    items,
-    payment.amount,
-    payment.method,
-    payment.shippingAddress
-  );
-
-  payment.status = "successful";
-  payment.order = order._id;
-  await payment.save();
-
-  return {
-    message: "Payment successful via Seerbit",
-    payment,
-    order,
-  };
+  // Still pending
+  return { message: "Payment still pending", payment, ligdicash: confirmed };
 };

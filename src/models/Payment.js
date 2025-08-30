@@ -13,7 +13,7 @@ const PaymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   method: {
     type: String,
-    enum: ["wallet", "paystack", "cinetpay", "seerbit"],
+    enum: ["wallet", "paystack", "ligdicash"],
     required: true,
   },
   status: {
@@ -33,6 +33,7 @@ const PaymentSchema = new mongoose.Schema({
       price: { type: Number, required: true },
     },
   ],
+  gatewayReference: { type: String, unique: true },
   reference: { type: String, unique: true, required: true }, // Paystack ref or internal
   date: { type: Date, default: Date.now },
 });

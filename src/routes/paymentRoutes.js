@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const paymentController = require("../controllers/paymentController");
+
 const authMiddleware = require("../middlewares/authMiddleware");
 // Make wallet payment
 router.post("/wallet", authMiddleware, paymentController.walletPayment);
@@ -14,6 +15,17 @@ router.post(
 
 // Verify Paystack payment (after callback)
 router.get("/verify", paymentController.verifyPaystack);
+
+//ligdicash
+router.post(
+  "/ligdicash",
+  authMiddleware,
+  paymentController.createLigdicashPayment
+);
+router.get("/ligdicash/verify", paymentController.verifyLigdicash);
+router.post("/ligdicash/callback", paymentController.ligdicashCallback);
+
+//////////
 
 router.post(
   "/cinetpay",

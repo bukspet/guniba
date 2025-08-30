@@ -33,7 +33,7 @@ const PaymentSchema = new mongoose.Schema({
       price: { type: Number, required: true },
     },
   ],
-  gatewayReference: { type: String, unique: true },
+  gatewayReference: { type: String },
   reference: { type: String, unique: true, required: true }, // Paystack ref or internal
   date: { type: Date, default: Date.now },
 });

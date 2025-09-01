@@ -545,19 +545,22 @@ exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
     throw new Error("Missing LigdiCash token for confirmation");
   }
 
-  // Confirm using the token
+  // Confirm with Ligdicash
   const confirmed = await confirmInvoice(payment.gatewayReference);
 
-  const status =
-    confirmed?.status ||
-    confirmed?.transaction_status ||
-    confirmed?.invoice_status ||
-    confirmed?.state;
+  // Safety check: response_code
+  if (confirmed?.response_code !== "00") {
+    throw new Error(
+      `Ligdicash error: ${confirmed?.description || "Unknown error"}`
+    );
+  }
 
+  const status = confirmed?.status;
   if (!status) throw new Error("Unable to determine Ligdicash status");
 
   const normalized = String(status).toLowerCase();
 
+  // ✅ Success case
   if (["completed", "success", "paid"].includes(normalized)) {
     const items = payment.items.map((it) => ({
       variantId: new mongoose.Types.ObjectId(
@@ -575,18 +578,27 @@ exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
       payment.shippingAddress
     );
 
+    // Save transaction metadata
     payment.order = order._id;
     payment.status = "successful";
+    payment.gatewayResponse = {
+      id_invoice: confirmed.custom_data?.[0]?.id_invoice,
+      transaction_id: confirmed.transaction_id,
+      operator: confirmed.operator_name,
+    };
     await payment.save();
 
     return { message: "Payment successful via Ligdicash", payment, order };
   }
 
+  // ❌ Failed / cancelled
   if (["canceled", "cancelled", "failed", "expired"].includes(normalized)) {
     payment.status = "failed";
+    payment.gatewayResponse = confirmed;
     await payment.save();
     throw new Error(`Payment ${normalized}`);
   }
 
+  // ⏳ Pending
   return { message: "Payment still pending", payment, ligdicash: confirmed };
 };

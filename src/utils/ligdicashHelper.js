@@ -1,6 +1,6 @@
 // helpers/ligdicash.js
 const axios = require("axios");
-const jwt = require("jsonwebtoken");
+
 const BASE_URL =
   process.env.LIGDICASH_BASE_URL || "https://app.ligdicash.com/pay/v01";
 const API_KEY = process.env.LIGDICASH_API_KEY;
@@ -40,40 +40,20 @@ async function createInvoice(payload) {
  * Some integrations expose /confirm or /check endpoints; we’ll support both.
  * Prefer /redirect/checkout-invoice/confirm if available in your account.
  */
-async function confirmInvoice(token) {
-  // Step 1: decode token
-  const decoded = jwt.decode(token);
-  if (!decoded?.id_invoice) {
-    throw new Error("Unable to extract id_invoice from token");
-  }
-  const id_invoice = decoded.id_invoice;
-  console.log("Decoded id_invoice:", id_invoice);
-
+async function confirmInvoice(invoiceToken) {
   try {
-    // Step 2: try confirm (some tenants block this → 405)
-    const payload = { id_invoice };
-    const { data } = await client.post(
-      "/redirect/checkout-invoice/confirm",
-      payload
-    );
+    console.log("🔍 Confirming invoice with token:", invoiceToken);
+
+    // GET request with query param
+    const { data } = await client.get(`/redirect/checkout-invoice/confirm`, {
+      params: { invoiceToken }, // ?invoiceToken=<token>
+    });
+
     return data;
   } catch (err) {
     const details = err.response?.data || err.message;
     console.error("❌ Ligdicash confirmInvoice error:", details);
-
-    // Step 3: fallback to /check/{id_invoice}
-    try {
-      const { data } = await client.get(
-        `/redirect/checkout-invoice/check/${encodeURIComponent(id_invoice)}`
-      );
-      return data;
-    } catch (err2) {
-      console.error(
-        "❌ Ligdicash fallback check error:",
-        err2.response?.data || err2.message
-      );
-      throw new Error("Failed to confirm/check Ligdicash invoice");
-    }
+    throw new Error("Failed to confirm Ligdicash invoice");
   }
 }
 

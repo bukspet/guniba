@@ -512,7 +512,7 @@ exports.initiateLigdicashPayment = async (
 
   // Store gateway token if provided
   if (ligdiToken) {
-    payment.gatewayReference = ligdi / Token;
+    payment.gatewayReference = ligdiToken;
     await payment.save();
   }
 

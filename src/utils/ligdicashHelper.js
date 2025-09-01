@@ -40,25 +40,36 @@ async function createInvoice(payload) {
  * Some integrations expose /confirm or /check endpoints; we’ll support both.
  * Prefer /redirect/checkout-invoice/confirm if available in your account.
  */
-async function confirmInvoice(tokenOrExternalId) {
-  // Try confirm first; if your tenant uses a different path, switch here.
-  const pathCandidates = [
-    `/redirect/checkout-invoice/confirm/${encodeURIComponent(
-      tokenOrExternalId
-    )}`,
-    `/redirect/checkout-invoice/check/${encodeURIComponent(tokenOrExternalId)}`,
-  ];
+async function confirmInvoice(refOrInvoiceId) {
+  try {
+    // 🔑 always prefer id_invoice when available
+    const payload = { id_invoice: refOrInvoiceId };
 
-  for (const path of pathCandidates) {
+    // confirm endpoint is POST with JSON body
+    const { data } = await client.post(
+      "/redirect/checkout-invoice/confirm",
+      payload
+    );
+
+    return data;
+  } catch (err) {
+    const details = err.response?.data || err.message;
+    console.error("❌ Ligdicash confirmInvoice error:", details);
+
+    // fallback: some tenants still allow GET check
     try {
-      const { data } = await client.get(path);
+      const { data } = await client.get(
+        `/redirect/checkout-invoice/check/${encodeURIComponent(refOrInvoiceId)}`
+      );
       return data;
-    } catch (err) {
-      // try next
-      continue;
+    } catch (err2) {
+      console.error(
+        "❌ Ligdicash fallback check error:",
+        err2.response?.data || err2.message
+      );
+      throw new Error("Failed to confirm/check Ligdicash invoice");
     }
   }
-  throw new Error("Failed to confirm/check Ligdicash invoice");
 }
 
 module.exports = {

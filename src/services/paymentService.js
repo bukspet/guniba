@@ -543,9 +543,11 @@ exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
   }
 
   // Always prefer invoiceId when confirming
-  const checkRef = payment.ligdiInvoiceId || payment.gatewayReference;
+  if (!payment.ligdiInvoiceId) {
+    throw new Error("Missing LigdiCash reference for confirmation");
+  }
 
-  const confirmed = await confirmInvoice(checkRef);
+  const confirmed = await confirmInvoice(payment.ligdiInvoiceId);
 
   const status =
     confirmed?.status ||

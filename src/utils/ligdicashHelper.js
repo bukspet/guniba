@@ -40,12 +40,11 @@ async function createInvoice(payload) {
  * Some integrations expose /confirm or /check endpoints; we’ll support both.
  * Prefer /redirect/checkout-invoice/confirm if available in your account.
  */
-async function confirmInvoice(refOrInvoiceId) {
+async function confirmInvoice(token) {
   try {
-    // 🔑 always prefer id_invoice when available
-    const payload = { id_invoice: refOrInvoiceId };
+    // Ligdicash confirmation expects the token directly
+    const payload = { token };
 
-    // confirm endpoint is POST with JSON body
     const { data } = await client.post(
       "/redirect/checkout-invoice/confirm",
       payload
@@ -56,10 +55,10 @@ async function confirmInvoice(refOrInvoiceId) {
     const details = err.response?.data || err.message;
     console.error("❌ Ligdicash confirmInvoice error:", details);
 
-    // fallback: some tenants still allow GET check
+    // fallback: GET with token if POST fails
     try {
       const { data } = await client.get(
-        `/redirect/checkout-invoice/check/${encodeURIComponent(refOrInvoiceId)}`
+        `/redirect/checkout-invoice/check/${encodeURIComponent(token)}`
       );
       return data;
     } catch (err2) {

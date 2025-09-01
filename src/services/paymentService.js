@@ -499,12 +499,10 @@ exports.initiateLigdicashPayment = async (
 
   // Create invoice in Ligdicash
   const resp = await createInvoice(payload);
-
   console.log("resp", resp);
 
   const paymentUrl = resp?.response_text;
   const ligdiToken = resp?.token || null;
-  const ligdiInvoiceId = resp?.id_invoice || null; // ✅ FIX 1: capture invoice id
 
   if (!paymentUrl) {
     payment.status = "failed";
@@ -512,18 +510,18 @@ exports.initiateLigdicashPayment = async (
     throw new Error("Ligdicash did not return a payment URL");
   }
 
-  // ✅ FIX 2: save BOTH token + invoice id
-  if (ligdiToken) payment.gatewayReference = ligdiToken;
-  if (ligdiInvoiceId) payment.ligdiInvoiceId = ligdiInvoiceId;
-  await payment.save();
+  // Save token for later confirmation
+  if (ligdiToken) {
+    payment.gatewayReference = ligdiToken;
+    await payment.save();
+  }
 
   return {
     reference,
     amount: totalWithTax,
     paymentId: payment._id,
     paymentUrl,
-    ligdiToken,
-    ligdiInvoiceId, // return this too
+    ligdiToken, // return token for frontend if needed
     message: "Ligdicash invoice created.",
   };
 };
@@ -532,11 +530,10 @@ exports.initiateLigdicashPayment = async (
  * Verify + complete
  */
 exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
-  // ✅ FIX 3: search by invoiceId too
+  // Search by our internal ref OR stored token
   const payment =
     (await Payment.findOne({ reference: referenceOrToken })) ||
-    (await Payment.findOne({ gatewayReference: referenceOrToken })) ||
-    (await Payment.findOne({ ligdiInvoiceId: referenceOrToken }));
+    (await Payment.findOne({ gatewayReference: referenceOrToken }));
 
   if (!payment) throw new Error("Payment not found");
 
@@ -544,12 +541,12 @@ exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
     return { message: "Payment already processed", payment };
   }
 
-  // Always prefer invoiceId when confirming
-  if (!payment.ligdiInvoiceId) {
-    throw new Error("Missing LigdiCash reference for confirmation");
+  if (!payment.gatewayReference) {
+    throw new Error("Missing LigdiCash token for confirmation");
   }
 
-  const confirmed = await confirmInvoice(payment.ligdiInvoiceId);
+  // Confirm using the token
+  const confirmed = await confirmInvoice(payment.gatewayReference);
 
   const status =
     confirmed?.status ||

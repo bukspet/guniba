@@ -41,29 +41,27 @@ async function createInvoice(payload) {
  * Prefer /redirect/checkout-invoice/confirm if available in your account.
  */
 async function confirmInvoice(token) {
+  // Step 1: decode token
+  const decoded = jwt.decode(token);
+  if (!decoded?.id_invoice) {
+    throw new Error("Unable to extract id_invoice from token");
+  }
+  const id_invoice = decoded.id_invoice;
+  console.log("Decoded id_invoice:", id_invoice);
+
   try {
-    // Step 1: decode token to extract id_invoice
-    const decoded = jwt.decode(token);
-    if (!decoded?.id_invoice) {
-      throw new Error("Unable to extract id_invoice from token");
-    }
-    const id_invoice = decoded.id_invoice;
-    console.log("Decoded id_invoice:", id_invoice);
-
-    // Step 2: Call confirm with id_invoice
+    // Step 2: try confirm (some tenants block this → 405)
     const payload = { id_invoice };
-
     const { data } = await client.post(
       "/redirect/checkout-invoice/confirm",
       payload
     );
-
     return data;
   } catch (err) {
     const details = err.response?.data || err.message;
     console.error("❌ Ligdicash confirmInvoice error:", details);
 
-    // fallback: GET with id_invoice
+    // Step 3: fallback to /check/{id_invoice}
     try {
       const { data } = await client.get(
         `/redirect/checkout-invoice/check/${encodeURIComponent(id_invoice)}`

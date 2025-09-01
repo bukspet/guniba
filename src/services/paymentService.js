@@ -532,7 +532,9 @@ exports.initiateLigdicashPayment = async (
  */
 exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
   // We allow either our internal reference or Ligdicash token
-  const payment = await Payment.findOne({ gatewayReference: referenceOrToken });
+  const payment =
+    (await Payment.findOne({ reference: referenceOrToken })) ||
+    (await Payment.findOne({ gatewayReference: referenceOrToken }));
 
   if (!payment) throw new Error("Payment not found");
 

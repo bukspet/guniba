@@ -1,6 +1,6 @@
 // helpers/ligdicash.js
 const axios = require("axios");
-
+const jwt = require("jsonwebtoken");
 const BASE_URL =
   process.env.LIGDICASH_BASE_URL || "https://app.ligdicash.com/pay/v01";
 const API_KEY = process.env.LIGDICASH_API_KEY;
@@ -42,10 +42,16 @@ async function createInvoice(payload) {
  */
 async function confirmInvoice(token) {
   try {
-    // Ligdicash confirmation expects the token directly
-    const payload = { token };
+    // Step 1: decode token to extract id_invoice
+    const decoded = jwt.decode(token);
+    if (!decoded?.id_invoice) {
+      throw new Error("Unable to extract id_invoice from token");
+    }
+    const id_invoice = decoded.id_invoice;
+    console.log("Decoded id_invoice:", id_invoice);
 
-    console.log(token, "confirm token");
+    // Step 2: Call confirm with id_invoice
+    const payload = { id_invoice };
 
     const { data } = await client.post(
       "/redirect/checkout-invoice/confirm",
@@ -57,10 +63,10 @@ async function confirmInvoice(token) {
     const details = err.response?.data || err.message;
     console.error("❌ Ligdicash confirmInvoice error:", details);
 
-    // fallback: GET with token if POST fails
+    // fallback: GET with id_invoice
     try {
       const { data } = await client.get(
-        `/redirect/checkout-invoice/check/${encodeURIComponent(token)}`
+        `/redirect/checkout-invoice/check/${encodeURIComponent(id_invoice)}`
       );
       return data;
     } catch (err2) {

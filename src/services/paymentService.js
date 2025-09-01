@@ -500,6 +500,8 @@ exports.initiateLigdicashPayment = async (
   // Create invoice in Ligdicash
   const resp = await createInvoice(payload);
 
+  console.log("resp", resp);
+
   const paymentUrl = resp?.response_text;
   const ligdiToken = resp?.token || null;
   const ligdiInvoiceId = resp?.id_invoice || null; // ✅ FIX 1: capture invoice id

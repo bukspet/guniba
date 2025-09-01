@@ -430,23 +430,22 @@ exports.initiateLigdicashPayment = async (
   if (!items?.length) throw new Error("Items are required");
   if (!shippingAddress) throw new Error("Shipping address is required");
 
-  // Compute totals (assumes prices are in XOF; if not, convert BEFORE calling this)
+  // Compute totals
   const subtotal = items.reduce(
     (s, i) => s + Number(i.price) * Number(i.quantity),
     0
   );
-  const totalWithTax = Math.round(subtotal * 1.1); // 10% tax as in your Paystack flow
+  const totalWithTax = Math.round(subtotal * 1.1);
 
   const reference = generateReference("LDG");
 
-  // Save an initial payment row
+  // Save initial payment row
   const payment = await Payment.create({
     user: userId,
     amount: totalWithTax,
     method: "ligdicash",
     status: "pending",
-    reference, // our internal reference
-
+    reference, // internal ref
     shippingAddress,
     items: items.map((i) => ({
       id: i.variantId || i.id,
@@ -469,12 +468,12 @@ exports.initiateLigdicashPayment = async (
         total_amount: totalWithTax,
         devise: "XOF",
         description: userMeta.description || "Order payment",
-        customer: userMeta.customer || "", // optional phone/account id
+        customer: userMeta.customer || "",
         customer_firstname: userMeta.firstName || "",
         customer_lastname: userMeta.lastName || "",
         customer_email: userMeta.email || "",
-        external_id: reference, // tie Ligdicash invoice to our ref
-        otp: "", // if you want OTP, set according to your setup
+        external_id: reference,
+        otp: "",
       },
       store: {
         name: process.env.STORE_NAME || "Guniba",
@@ -503,6 +502,7 @@ exports.initiateLigdicashPayment = async (
 
   const paymentUrl = resp?.response_text;
   const ligdiToken = resp?.token || null;
+  const ligdiInvoiceId = resp?.id_invoice || null; // ✅ FIX 1: capture invoice id
 
   if (!paymentUrl) {
     payment.status = "failed";
@@ -510,31 +510,31 @@ exports.initiateLigdicashPayment = async (
     throw new Error("Ligdicash did not return a payment URL");
   }
 
-  // Store gateway token if provided
-  if (ligdiToken) {
-    payment.gatewayReference = ligdiToken;
-    await payment.save();
-  }
+  // ✅ FIX 2: save BOTH token + invoice id
+  if (ligdiToken) payment.gatewayReference = ligdiToken;
+  if (ligdiInvoiceId) payment.ligdiInvoiceId = ligdiInvoiceId;
+  await payment.save();
 
   return {
     reference,
     amount: totalWithTax,
     paymentId: payment._id,
-    paymentUrl, // Frontend should redirect here
+    paymentUrl,
     ligdiToken,
+    ligdiInvoiceId, // return this too
     message: "Ligdicash invoice created.",
   };
 };
+
 /**
- * Verify + complete:
- * - Checks Ligdicash status
- * - Creates order when paid
+ * Verify + complete
  */
 exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
-  // We allow either our internal reference or Ligdicash token
+  // ✅ FIX 3: search by invoiceId too
   const payment =
     (await Payment.findOne({ reference: referenceOrToken })) ||
-    (await Payment.findOne({ gatewayReference: referenceOrToken }));
+    (await Payment.findOne({ gatewayReference: referenceOrToken })) ||
+    (await Payment.findOne({ ligdiInvoiceId: referenceOrToken }));
 
   if (!payment) throw new Error("Payment not found");
 
@@ -542,13 +542,11 @@ exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
     return { message: "Payment already processed", payment };
   }
 
-  // Confirm/Check
-  const checkRef = payment.gatewayReference || payment.reference;
+  // Always prefer invoiceId when confirming
+  const checkRef = payment.ligdiInvoiceId || payment.gatewayReference;
 
   const confirmed = await confirmInvoice(checkRef);
 
-  // Map Ligdicash statuses → your schema
-  // Typical statuses: "pending", "completed"/"success", "canceled", "failed"
   const status =
     confirmed?.status ||
     confirmed?.transaction_status ||
@@ -589,6 +587,5 @@ exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
     throw new Error(`Payment ${normalized}`);
   }
 
-  // Still pending
   return { message: "Payment still pending", payment, ligdicash: confirmed };
 };

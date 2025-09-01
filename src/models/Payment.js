@@ -34,6 +34,7 @@ const PaymentSchema = new mongoose.Schema({
     },
   ],
   gatewayReference: { type: String },
+  ligdiInvoiceId: { type: String },
   reference: { type: String, unique: true, required: true }, // Paystack ref or internal
   date: { type: Date, default: Date.now },
 });

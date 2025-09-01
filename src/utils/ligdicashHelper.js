@@ -45,6 +45,8 @@ async function confirmInvoice(token) {
     // Ligdicash confirmation expects the token directly
     const payload = { token };
 
+    console.log(token, "confirm token");
+
     const { data } = await client.post(
       "/redirect/checkout-invoice/confirm",
       payload

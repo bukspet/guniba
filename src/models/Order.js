@@ -32,7 +32,7 @@ const OrderSchema = new mongoose.Schema(
 
     method: {
       type: String,
-      enum: ["wallet", "paystack"],
+      enum: ["wallet", "paystack", "ligdicash"],
       required: true,
     },
 

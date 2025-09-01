@@ -489,7 +489,7 @@ exports.initiateLigdicashPayment = async (
           "https://www.guniba.net/checkout/ligdicash/return",
         callback_url:
           process.env.CALLBACK_URL ||
-          "https://www.guniba.net/payment/ligdicash/callback",
+          "https://guniba.onrender.com/api/payment/ligdicash/",
       },
       custom_data: {
         order_id: reference,
@@ -512,7 +512,7 @@ exports.initiateLigdicashPayment = async (
 
   // Store gateway token if provided
   if (ligdiToken) {
-    payment.gatewayReference = ligdiToken;
+    payment.gatewayReference = ligdi / Token;
     await payment.save();
   }
 
@@ -532,7 +532,7 @@ exports.initiateLigdicashPayment = async (
  */
 exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
   // We allow either our internal reference or Ligdicash token
-  const payment = await Payment.findOne({ reference: referenceOrToken });
+  const payment = await Payment.findOne({ gatewayReference: referenceOrToken });
 
   if (!payment) throw new Error("Payment not found");
 

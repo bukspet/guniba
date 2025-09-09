@@ -240,7 +240,11 @@ class AuthService {
     try {
       const user = await User.findOne({ email });
       if (!user) {
-        return { success: false, message: "User not found.", data: null };
+        return {
+          success: false,
+          message: "We found no account registered with this email.",
+          data: null,
+        };
       }
       // const resetCode = crypto.randomBytes(20).toString("hex");
 

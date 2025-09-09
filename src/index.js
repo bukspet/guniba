@@ -42,6 +42,7 @@ const io = new Server(server, {
     origin: [
       "http://localhost:3000",
       "http://localhost:3001",
+      "https://www.guniba.net",
       "https://guniba-client.vercel.app",
     ],
     credentials: true,

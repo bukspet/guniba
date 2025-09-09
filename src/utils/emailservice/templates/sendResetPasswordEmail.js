@@ -8,8 +8,19 @@ async function sendResetPasswordEmail(email, resetCode) {
     const messageTemplate = () => `
       <p>Hello,</p>
       <p>You have requested to reset your password for your Guniba account.</p>
-      <p>Please use the following code to reset your password:</p>
-      <p style="font-size: 1.5em; margin-top: 10px; margin-bottom: 10px;">${resetCode}</p>
+ <p style="
+  font-size: 1.5em; 
+  margin: 10px 0; 
+  background-color: #f3f4f6; 
+  color: #111827; 
+  padding: 10px 20px; 
+  display: inline-block; 
+  border-radius: 8px; 
+  font-weight: bold; 
+  letter-spacing: 2px;
+">
+  ${resetCode}
+</p>
       <p>Enter this code on the password reset page.</p>
       <p>This code will expire in 60 minutes.</p>
       <p>If you did not request a password reset, please ignore this email. Your password will remain unchanged.</p>

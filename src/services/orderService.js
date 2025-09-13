@@ -85,7 +85,7 @@ exports.updateMultipleOrderStatus = async (orderIds, status) => {
   const updatedOrders = [];
 
   for (const id of validIds) {
-    const order = await Order.findById(id).populate("user", "email"); // ✅ populate user email
+    const order = await Order.findById(id).populate("user", "email");
     if (!order) continue;
 
     order.status = status;
@@ -308,7 +308,7 @@ exports.getAdminOrdersSummary = async () => {
 exports.getOrderById = async (orderId) => {
   const order = await Order.findById(orderId)
     .populate("user", "name email phone")
-    .populate("shippingAddress") // ✅ Populate all shipping address fields
+    .populate("shippingAddress")
     .populate({
       path: "items.variantId",
       populate: {

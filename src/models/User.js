@@ -21,6 +21,10 @@ const userSchema = new mongoose.Schema(
     avatar: {
       type: String,
     },
+
+    country: {
+      type: String,
+    },
     password: {
       type: String,
       required: [true, "Password is required"],
@@ -34,7 +38,7 @@ const userSchema = new mongoose.Schema(
     referredBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      default: null, // Stores the ID of the user who referred this user
+      default: null,
     },
     verified: { type: Boolean, default: false },
     verificationCode: { type: String, default: null },

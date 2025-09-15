@@ -23,6 +23,7 @@ class ReferralService {
         name: user.fullName,
         email: user.email,
         dateJoined: user.createdAt,
+        avatar: user.avatar,
         generation,
         invitedBy: invitedByUser
           ? {

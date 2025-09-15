@@ -11,7 +11,7 @@ function generateReference() {
 
 exports.getUserCommissions = async (userId) => {
   return await Commission.find({ recipient: userId })
-    .populate("fromUser", "name email")
+    .populate("fromUser", "fullName email avatar")
     .populate("orderId", "orderNumber totalPrice")
     .sort({ createdAt: -1 });
 };

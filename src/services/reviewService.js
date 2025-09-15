@@ -15,7 +15,7 @@ exports.createReview = async (data) => {
 
 exports.getReviews = async (filter = {}) => {
   return await Review.find(filter)
-    .populate("userId", "fullName email")
+    .populate("userId", "fullName email avatar")
     .populate("productId")
     .populate("variantId")
     .sort({ createdAt: -1 });
@@ -23,7 +23,7 @@ exports.getReviews = async (filter = {}) => {
 
 exports.getReviewById = async (reviewId) => {
   const review = await Review.findById(reviewId)
-    .populate("userId", "fullName email")
+    .populate("userId", "fullName email avatar")
     .populate("productId")
     .populate("variantId");
   if (!review) throw new Error("Review not found");

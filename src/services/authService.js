@@ -66,7 +66,7 @@ class AuthService {
 
       const newUser = await User.create({
         fullName,
-        email,
+        email: email.toLowerCase().trim(),
         password,
         referralCode: newReferralCode,
         referredBy,
@@ -116,7 +116,7 @@ class AuthService {
         ua.os?.name || "Unknown OS"
       } ${ua.device?.type || "computer"}`;
 
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ email: email.toLowerCase().trim() });
       if (!user)
         return {
           success: false,

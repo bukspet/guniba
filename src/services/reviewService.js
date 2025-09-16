@@ -31,6 +31,7 @@ exports.getReviewById = async (reviewId) => {
 };
 exports.getReadyToReviewForUser = async (userId) => {
   const records = await ReadyToReview.find({ userId })
+    .sort({ createdAt: -1 })
     .populate("productId")
     .populate("variantId")
     .populate("orderId", "status createdAt");

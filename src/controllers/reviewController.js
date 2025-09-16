@@ -15,7 +15,15 @@ exports.createReviewController = async (req, res) => {
 
 exports.getAllReviewsController = async (req, res) => {
   try {
-    const reviews = await reviewService.getReviews();
+    const { productId } = req.query;
+    // Build filter object
+    const filter = {};
+    if (productId) {
+      filter.productId = productId;
+    }
+
+    const reviews = await reviewService.getReviews(filter);
+
     res.json({ success: true, data: reviews });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });

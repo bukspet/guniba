@@ -10,6 +10,9 @@ const {
 const {
   sendResetPasswordEmail,
 } = require("../utils/emailservice/templates/sendResetPasswordEmail.js");
+const {
+  sendSignupEmail,
+} = require("../utils/emailservice/templates/signupEmail.js");
 
 // const sendRealTimeNotification = (userId, notification) => {
 //   console.log(
@@ -72,14 +75,22 @@ class AuthService {
         referredBy,
       });
 
-      // Send Welcome Notification (Non-blocking)
-      // NotificationService.sendNotification(
-      //   newUser._id,
-      //   "Welcome!",
-      //   `Hello ${newUser.fullName}, welcome to Guniba!`
-      // ).catch((err) => console.error("Notification Error:", err.message));
+      // ✅ Send Welcome Email
+      const emailSent = await sendSignupEmail(
+        newUser.email,
+        newUser.fullName,
+        newUser.referralCode
+      );
 
-      // const token = generateToken(newUser._id);
+      if (!emailSent || emailSent.message !== "Queued. Thank you.") {
+        console.error(
+          "❌ Failed to send signup email for:",
+          newUser.email,
+          emailSent
+        );
+      } else {
+        console.log("✅ Signup email sent to:", newUser.email);
+      }
 
       const { accessToken, refreshToken } = generateTokens(
         newUser._id,
@@ -105,6 +116,7 @@ class AuthService {
       };
     }
   }
+
   static async signin({ email, password, req }) {
     try {
       const ip =

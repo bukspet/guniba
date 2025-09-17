@@ -329,6 +329,7 @@ const getAllProductsWithVariants = async (
     }
 
     const products = await Product.find(query)
+      .sort({ createdAt: -1 })
       .populate("variantTypes")
       .populate({
         path: "variants",

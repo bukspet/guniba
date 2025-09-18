@@ -4,13 +4,15 @@ async function sendOrderCreatedEmail(email, order) {
   try {
     const sender = "Guniba <postmaster@mail.guniba.net>";
     const subject = `Your Order #${order.orderNo} Has Been Created`;
-
+    console.log(order, "order");
     // Format items list into HTML
     const itemsList = order.items
       .map(
         (item) => `
         <tr>
-          <td style="padding: 8px; border: 1px solid #ddd;">${item.name}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">  ${
+            item.variantId?.productId?.name || "Unnamed Product"
+          }</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${
             item.quantity
           }</td>

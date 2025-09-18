@@ -42,6 +42,16 @@ exports.createOrder = async (
     shippingAddress: shippingAddressId,
   });
 
+  const populatedOrder = await Order.findById(order._id)
+    .populate({
+      path: "items.variantId",
+      populate: {
+        path: "productId", // if Variant has product reference
+        select: "name",
+      },
+    })
+    .lean();
+
   // ✅ Notifications
   await notificationService.createNotification({
     userId,
@@ -62,7 +72,7 @@ exports.createOrder = async (
   // ✅ Send Email to User
   const user = await User.findById(userId).select("email");
   if (user?.email) {
-    const emailSent = await sendOrderCreatedEmail(user.email, order);
+    const emailSent = await sendOrderCreatedEmail(user.email, populatedOrder);
 
     if (!emailSent || emailSent.message !== "Queued. Thank you.") {
       console.error(
@@ -89,15 +99,29 @@ exports.updateMultipleOrderStatus = async (orderIds, status) => {
 
   for (const id of validIds) {
     const order = await Order.findById(id).populate("user", "email");
+
     if (!order) continue;
 
     order.status = status;
+
+    const populatedOrder = await Order.findById(order._id)
+      .populate({
+        path: "items.variantId",
+        populate: {
+          path: "productId", // if Variant has product reference
+          select: "name",
+        },
+      })
+      .lean();
 
     if (status === "Shipped") {
       order.shippedAt = new Date();
 
       if (order.user?.email) {
-        const emailSent = await sendOrderShippedEmail(order.user.email, order);
+        const emailSent = await sendOrderShippedEmail(
+          order.user.email,
+          populatedOrder
+        );
 
         if (!emailSent || emailSent.message !== "Queued. Thank you.") {
           console.error(

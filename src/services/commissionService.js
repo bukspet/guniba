@@ -4,6 +4,12 @@ const notificationService = require("./notificationService");
 const WithdrawalRequest = require("../models/WithdrawalRequest");
 const PayoutCard = require("../models/PayoutCard");
 const WalletTransaction = require("../models/WalletTransaction");
+const {
+  sendWithdrawalToWalletEmail,
+} = require("../utils/emailservice/templates/walletWithdrawalEmailSuccess");
+const {
+  sendWithdrawalToBankPendingEmail,
+} = require("../utils/emailservice/templates/withdrawalTobankEmail");
 
 function generateReference() {
   return "#" + Math.floor(100000 + Math.random() * 900000); // e.g. #123456
@@ -28,17 +34,14 @@ exports.withdrawToWallet = async (userId, amount) => {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  // Check available balance
   if (amount > user.commissionBalance) {
     throw new Error("Insufficient commission balance");
   }
 
-  // Deduct commission and increase wallet
   user.commissionBalance -= amount;
   user.wallet += amount;
   await user.save();
 
-  // Log transaction
   const withdrawal = await WalletTransaction.create({
     user: userId,
     transactionId: generateReference(),
@@ -46,6 +49,11 @@ exports.withdrawToWallet = async (userId, amount) => {
     amount,
     status: "approved",
   });
+
+  // ✅ Send Email
+  if (user?.email) {
+    await sendWithdrawalToWalletEmail(user.email, withdrawal, user);
+  }
 
   return {
     message: "Withdrawal to wallet successful",
@@ -89,6 +97,9 @@ exports.withdrawToBank = async (userId, amount, payoutCardId) => {
     status: "pending",
   });
 
+  if (user.email) {
+    await sendWithdrawalToBankPendingEmail(user.email, withdrawal, card);
+  }
   // Step 4: Notify admin
   await notificationService.createNotification({
     userId,

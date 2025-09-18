@@ -1,4 +1,7 @@
 const WithdrawalRequest = require("../models/WithdrawalRequest");
+const {
+  sendWithdrawalStatusEmail,
+} = require("../utils/emailservice/templates/withdwalRequestResponseEmail");
 
 exports.getAllWithdrawalRequests = async () => {
   return WithdrawalRequest.find()
@@ -31,7 +34,6 @@ exports.updateWithdrawalRequestStatus = async (
     if (user.commissionBalance < amount) {
       throw new Error("Insufficient commission balance at approval time");
     }
-
     user.commissionBalance -= amount;
     await user.save();
   }
@@ -44,17 +46,20 @@ exports.updateWithdrawalRequestStatus = async (
   request.actionBy = actionBy;
   await request.save();
 
-  // ✅ Update the corresponding wallet transaction
   await WalletTransaction.findOneAndUpdate(
     {
       user: user._id,
       amount: amount,
       type: "withdrawal to Bank",
-      status: "pending", // only update the matching pending one
+      status: "pending",
     },
-    { status: newStatus }, // set to "approved" or "rejected"
+    { status: newStatus },
     { new: true }
   );
+
+  if (user.email) {
+    await sendWithdrawalStatusEmail(user.email, request);
+  }
 
   return request;
 };

@@ -9,6 +9,9 @@ const ShippingAddress = require("../models/ShippingAddress");
 const {
   sendOrderCreatedEmail,
 } = require("../utils/emailservice/templates/orderEmail");
+const {
+  sendOrderShippedEmail,
+} = require("../utils/emailservice/templates/orderShippedEmail");
 
 const generateOrderNo = () => {
   return `GU-${Math.floor(100000000 + Math.random() * 900000000)}`;

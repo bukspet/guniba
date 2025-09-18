@@ -45,7 +45,7 @@ async function sendOrderShippedEmail(email, order) {
         <b>Total:</b> ₦${order.totalPrice.toLocaleString()}
       </p>
 
-      <p>📦 Shipped On: ${new Date(order.shippedAt).toLocaleString()}</p>
+     
 
       <p>Your package is on its way and should arrive soon. You will be notified once it is delivered.</p>
 

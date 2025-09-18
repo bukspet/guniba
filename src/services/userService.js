@@ -4,7 +4,7 @@ class UserService {
   async getAllUsers() {
     const users = await User.find({ role: "user" })
       .select(
-        "fullName email phone status role level commissionEarned totalSales lastActivity createdAt referredBy"
+        "fullName email phone status role level commissionEarned totalSales lastActivity createdAt referredBy avatar"
       )
       .lean();
 

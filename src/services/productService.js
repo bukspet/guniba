@@ -181,6 +181,9 @@ const getProductWithVariants = async (productId, userCode = null) => {
       };
     }
 
+    // ✅ compute average rating
+    product.averageRating = calculateAverageRating(product.rating);
+
     // Get applicable discount for this product/category
     const discount = await applyDiscountIfApplicable(
       product._id,
@@ -283,6 +286,7 @@ const getAllProductsWithVariants = async (
       "filters:",
       filters
     );
+
     const searchFilter = searchRegex
       ? {
           $or: [
@@ -295,7 +299,6 @@ const getAllProductsWithVariants = async (
       : {};
 
     let priceQuery = {};
-
     if (priceFilter.under) {
       priceQuery.price = { $lte: priceFilter.under };
     } else if (priceFilter.above) {
@@ -307,19 +310,11 @@ const getAllProductsWithVariants = async (
       };
     }
 
-    let ratingQuery = {};
-
-    if (ratingFilter.above) {
-      ratingQuery.rating = { $gte: ratingFilter.above };
-    }
-
     const query = {
       ...filters,
       ...searchFilter,
       ...priceQuery,
-      ...ratingQuery,
       temporal: false,
-      isDeleted: false,
       isDeleted: { $ne: true },
     };
 
@@ -358,8 +353,11 @@ const getAllProductsWithVariants = async (
       .sort(mongoSort)
       .lean();
 
-    const transformedProducts = products.map((product) => ({
+    // ✅ Transform products
+    let transformedProducts = products.map((product) => ({
       ...product,
+      averageRating: calculateAverageRating(product.rating), // ✅ use function here
+      reviewCount: product.rating?.length || 0, // optional extra field
       variants: product.variants.map((variant) => ({
         ...variant,
         subnames: variant.combinations.map((combo) => combo.subname),
@@ -375,7 +373,14 @@ const getAllProductsWithVariants = async (
           : [],
       })),
     }));
-    console.log(transformedProducts, products);
+
+    // ✅ Apply rating filter on averageRating
+    if (ratingFilter.above) {
+      transformedProducts = transformedProducts.filter(
+        (p) => p.averageRating >= ratingFilter.above
+      );
+    }
+
     return {
       success: true,
       message: "Products fetched successfully",
@@ -436,6 +441,12 @@ const deleteVariantType = async (variantTypeId) => {
   await Product.updateMany({}, { $pull: { variantTypes: variantTypeId } });
   return await VariantType.findByIdAndDelete(variantTypeId);
 };
+
+function calculateAverageRating(ratings = []) {
+  if (!ratings || ratings.length === 0) return 0;
+  const sum = ratings.reduce((a, b) => a + b, 0);
+  return sum / ratings.length;
+}
 
 module.exports = {
   createProduct,

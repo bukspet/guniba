@@ -37,12 +37,24 @@ exports.updateWithdrawalRequestStatus = async (
   }
 
   if (newStatus === "rejected") {
-    request.reasonForRejection = reasonForRejection; // save reason
+    request.reasonForRejection = reasonForRejection;
   }
 
   request.status = newStatus;
   request.actionBy = actionBy;
   await request.save();
+
+  // ✅ Update the corresponding wallet transaction
+  await WalletTransaction.findOneAndUpdate(
+    {
+      user: user._id,
+      amount: amount,
+      type: "withdrawal to Bank",
+      status: "pending", // only update the matching pending one
+    },
+    { status: newStatus }, // set to "approved" or "rejected"
+    { new: true }
+  );
 
   return request;
 };

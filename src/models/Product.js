@@ -69,7 +69,7 @@ const productSchema = new mongoose.Schema(
     keyFeatures: { type: String, default: null },
     productDetails: { type: String, default: null },
     keyInformation: { type: String, default: null },
-    rating: { type: Number, default: 0, min: 0, max: 5 },
+    rating: [{ type: Number, min: 0, max: 5 }],
 
     isDeleted: { type: Boolean, default: false },
     quantitySold: { type: Number, default: 0, min: 0 },

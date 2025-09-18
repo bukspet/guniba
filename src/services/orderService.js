@@ -56,21 +56,21 @@ exports.createOrder = async (
     type: "order",
   });
 
-  // // ✅ Send Email to User
-  // const user = await User.findById(userId).select("email");
-  // if (user?.email) {
-  //   const emailSent = await sendOrderCreatedEmail(user.email, order);
+  // ✅ Send Email to User
+  const user = await User.findById(userId).select("email");
+  if (user?.email) {
+    const emailSent = await sendOrderCreatedEmail(user.email, order);
 
-  //   if (!emailSent || emailSent.message !== "Queued. Thank you.") {
-  //     console.error(
-  //       "❌ Failed to send order email for:",
-  //       user.email,
-  //       emailSent
-  //     );
-  //   } else {
-  //     console.log("✅ Order email sent to:", user.email);
-  //   }
-  // }
+    if (!emailSent || emailSent.message !== "Queued. Thank you.") {
+      console.error(
+        "❌ Failed to send order email for:",
+        user.email,
+        emailSent
+      );
+    } else {
+      console.log("✅ Order email sent to:", user.email);
+    }
+  }
 
   return order;
 };
@@ -93,20 +93,19 @@ exports.updateMultipleOrderStatus = async (orderIds, status) => {
     if (status === "Shipped") {
       order.shippedAt = new Date();
 
-      // ✅ Send shipped email
-      // if (order.user?.email) {
-      //   const emailSent = await sendOrderShippedEmail(order.user.email, order);
+      if (order.user?.email) {
+        const emailSent = await sendOrderShippedEmail(order.user.email, order);
 
-      //   if (!emailSent || emailSent.message !== "Queued. Thank you.") {
-      //     console.error(
-      //       "❌ Failed to send shipped email for:",
-      //       order.user.email,
-      //       emailSent
-      //     );
-      //   } else {
-      //     console.log("✅ Shipped email sent to:", order.user.email);
-      //   }
-      // }
+        if (!emailSent || emailSent.message !== "Queued. Thank you.") {
+          console.error(
+            "❌ Failed to send shipped email for:",
+            order.user.email,
+            emailSent
+          );
+        } else {
+          console.log("✅ Shipped email sent to:", order.user.email);
+        }
+      }
     }
 
     if (status === "Return") {

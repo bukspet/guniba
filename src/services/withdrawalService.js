@@ -1,3 +1,4 @@
+const WalletTransaction = require("../models/WalletTransaction");
 const WithdrawalRequest = require("../models/WithdrawalRequest");
 const {
   sendWithdrawalStatusEmail,

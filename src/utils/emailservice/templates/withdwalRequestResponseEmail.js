@@ -15,7 +15,7 @@ async function sendWithdrawalStatusEmail(email, withdrawal) {
           <p>Good news! 🎉 Your withdrawal request has been <b>approved</b> and your funds are on the way.</p>
 
           <p><b>Reference:</b> ${withdrawal.requestId}</p>
-          <p><b>Amount:</b> ₦${withdrawal.amount.toLocaleString()}</p>
+          <p><b>Amount:</b> $${withdrawal.amount.toLocaleString()}</p>
           <p><b>Status:</b> Approved ✅</p>
 
           <p>The transfer will reflect in your bank account shortly.</p>
@@ -29,7 +29,7 @@ async function sendWithdrawalStatusEmail(email, withdrawal) {
           <p>Unfortunately, your withdrawal request has been <b>rejected</b>.</p>
 
           <p><b>Reference:</b> ${withdrawal.requestId}</p>
-          <p><b>Amount:</b> ₦${withdrawal.amount.toLocaleString()}</p>
+          <p><b>Amount:</b> $${withdrawal.amount.toLocaleString()}</p>
           <p><b>Status:</b> Rejected ❌</p>
           <p><b>Reason:</b> ${
             withdrawal.reasonForRejection || "Not specified"

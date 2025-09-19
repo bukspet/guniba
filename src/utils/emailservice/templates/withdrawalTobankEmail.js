@@ -3,17 +3,17 @@ const { sendEmail } = require("../emailService");
 async function sendWithdrawalToBankPendingEmail(email, withdrawal, card) {
   try {
     const sender = "Guniba <postmaster@mail.guniba.net>";
-    const subject = `Withdrawal Request Pending - ₦${withdrawal.amount.toLocaleString()}`;
+    const subject = `Withdrawal Request Pending - $${withdrawal.amount.toLocaleString()}`;
 
     const messageTemplate = () => `
       <p>Hello,</p>
       <p>We have received your withdrawal request. 🎉</p>
 
       <p><b>Reference:</b> ${withdrawal.requestId}</p>
-      <p><b>Amount:</b> ₦${withdrawal.amount.toLocaleString()}</p>
+      <p><b>Amount:</b>$${withdrawal.amount.toLocaleString()}</p>
       <p><b>Status:</b> Pending Review</p>
 
-      <p><b>Payout Bank:</b> ${card.bankName} (${card.accountNumber})</p>
+      <p><b>Payout Bank:</b> ${card.bank} (${card.accountNumber})</p>
       <p><b>Account Name:</b> ${card.accountName}</p>
 
       <p>Your request is currently <b>pending</b> and will be reviewed by our team shortly. 

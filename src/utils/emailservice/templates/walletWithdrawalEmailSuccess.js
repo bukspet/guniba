@@ -26,7 +26,7 @@ async function sendWithdrawalToWalletEmail(email, withdrawal, user) {
           </tr>
           <tr>
             <td style="padding: 8px; border: 1px solid #ddd;"><b>Amount</b></td>
-            <td style="padding: 8px; border: 1px solid #ddd;">₦${withdrawal.amount.toLocaleString()}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">$${withdrawal.amount.toLocaleString()}</td>
           </tr>
           <tr>
             <td style="padding: 8px; border: 1px solid #ddd;"><b>Status</b></td>

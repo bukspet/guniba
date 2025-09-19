@@ -4,10 +4,12 @@ const Order = require("../models/Order.js");
 
 class MLMService {
   async calculateCommission(userId, purchaseAmount, orderId) {
+    console.log(purchaseAmount, "amount");
     const user = await User.findById(userId);
     if (!user) return;
     // Update user sales and level
-    user.totalSales += purchaseAmount;
+    const sales = Number(purchaseAmount) || 0;
+    user.totalSales += sales;
     user.level = this.determineLevel(user.totalSales);
     await user.save();
 

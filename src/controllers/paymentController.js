@@ -148,7 +148,7 @@ exports.ligdicashCallback = async (req, res) => {
     const transactionToken = token || orderId;
 
     if (!transactionToken) {
-      console.warn("⚠️ Ligdicash callback missing token/order_id:", body);
+      console.warn("Ligdicash callback missing token/order_id:", body);
       return res.status(200).json({ received: true });
     }
 

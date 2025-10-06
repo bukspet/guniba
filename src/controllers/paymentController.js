@@ -126,26 +126,55 @@ exports.verifyLigdicash = async (req, res) => {
 // ✅ Webhook Callback from Ligdicash
 exports.ligdicashCallback = async (req, res) => {
   try {
-    const token =
-      req.body?.token ||
-      req.body?.invoice?.token ||
-      req.body?.external_id ||
-      req.body?.commande?.invoice?.external_id ||
-      req.body?.custom_data?.order_id;
+    const body = req.body;
 
-    if (!token) {
-      console.warn("⚠️ Ligdicash callback missing token/external_id", req.body);
+    // Extract token (main transaction token)
+    const token =
+      body?.token ||
+      body?.invoice?.token ||
+      body?.external_id ||
+      body?.commande?.invoice?.external_id;
+
+    // Extract custom_data if it's an array
+    let orderId = null;
+    if (Array.isArray(body?.custom_data)) {
+      const orderData = body.custom_data.find(
+        (item) => item.keyof_customdata === "order_id"
+      );
+      if (orderData) orderId = orderData.valueof_customdata;
+    }
+
+    // Fallback if token is not found
+    const transactionToken = token || orderId;
+
+    if (!transactionToken) {
+      console.warn("⚠️ Ligdicash callback missing token/order_id:", body);
       return res.status(200).json({ received: true });
     }
 
-    await paymentService.verifyAndCompleteLigdicashPayment(token);
+    // Extract useful info for logging/debugging
+    const { response_code, status, operator_name, transaction_id, montant } =
+      body;
+
+    console.log("✅ Ligdicash Callback Received:", {
+      token: transactionToken,
+      response_code,
+      status,
+      operator_name,
+      transaction_id,
+      montant,
+    });
+
+    // Process payment verification / completion
+    await paymentService.verifyAndCompleteLigdicashPayment(transactionToken);
 
     return res.status(200).json({ received: true });
   } catch (err) {
-    console.error("Ligdicash Callback Error:", err);
-    return res.status(200).json({ received: true }); // still 200 so Ligdicash doesn’t retry forever
+    console.error("❌ Ligdicash Callback Error:", err);
+    return res.status(200).json({ received: true }); // Always 200 to avoid repeated retries
   }
 };
+
 exports.createCinetpayPayment = async (req, res) => {
   try {
     const { items, shippingAddress } = req.body;

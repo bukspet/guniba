@@ -194,7 +194,11 @@ exports.ligdicashCallback = async (req, res) => {
       ["successful", "failed"].includes(existingPayment.status)
     ) {
       console.log("ℹ️ Payment already processed:", existingPayment.status);
-      return res.status(200).json({ received: true });
+      return res.status(200).json({
+        received: true,
+        message: `Payment already processed with status: ${existingPayment.status}`,
+        payment: existingPayment,
+      });
     }
 
     // ✅ Process payment verification (only for callback)

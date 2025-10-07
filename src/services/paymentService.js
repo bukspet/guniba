@@ -529,76 +529,54 @@ exports.initiateLigdicashPayment = async (
 /**
  * Verify + complete
  */
-exports.verifyAndCompleteLigdicashPayment = async (referenceOrToken) => {
-  // Search by our internal ref OR stored token
-  const payment =
-    (await Payment.findOne({ reference: referenceOrToken })) ||
-    (await Payment.findOne({ gatewayReference: referenceOrToken }));
+exports.verifyAndCompleteLigdicashPayment = async (tokenOrRef) => {
+  // Find payment by token or reference
+  const payment = await Payment.findOne({
+    $or: [{ gatewayReference: tokenOrRef }, { reference: tokenOrRef }],
+  });
 
   if (!payment) throw new Error("Payment not found");
 
-  if (payment.status !== "pending") {
-    return { message: "Payment already processed", payment };
-  }
-
-  if (!payment.gatewayReference) {
-    throw new Error("Missing LigdiCash token for confirmation");
-  }
-
-  // Confirm with Ligdicash
-  const confirmed = await confirmInvoice(payment.gatewayReference);
-
-  // Safety check: response_code
-  if (confirmed?.response_code !== "00") {
-    throw new Error(
-      `Ligdicash error: ${confirmed?.description || "Unknown error"}`
+  // ✅ Idempotency check
+  if (payment.status === "successful") {
+    console.log(
+      `ℹ️ Payment ${payment.reference} already successful. Skipping verification.`
     );
+    return { payment };
   }
 
-  const status = confirmed?.status;
-  if (!status) throw new Error("Unable to determine Ligdicash status");
+  if (payment.status === "failed") {
+    console.log(
+      `ℹ️ Payment ${payment.reference} already failed. Skipping verification.`
+    );
+    return { payment };
+  }
 
-  const normalized = String(status).toLowerCase();
-
-  // ✅ Success case
-  if (["completed", "success", "paid"].includes(normalized)) {
-    const items = payment.items.map((it) => ({
-      variantId: new mongoose.Types.ObjectId(
-        typeof it.id === "object" ? it.id._id : it.id
-      ),
-      quantity: it.quantity,
-      price: it.price,
-    }));
-
-    const order = await createOrder(
-      payment.user,
-      items,
-      payment.amount,
-      payment.method,
-      payment.shippingAddress
+  // Only verify if still pending
+  try {
+    console.log(`🔍 Confirming invoice for token/ref: ${tokenOrRef}`);
+    const ligdiResp = await confirmInvoice(
+      payment.gatewayReference || tokenOrRef
     );
 
-    // Save transaction metadata
-    payment.order = order._id;
-    payment.status = "successful";
-    payment.gatewayResponse = {
-      id_invoice: confirmed.custom_data?.[0]?.id_invoice,
-      transaction_id: confirmed.transaction_id,
-      operator: confirmed.operator_name,
-    };
+    const { response_code, status } = ligdiResp;
+
+    if (response_code === "00" && status === "completed") {
+      payment.status = "successful";
+    } else if (status === "pending") {
+      payment.status = "pending";
+    } else {
+      payment.status = "failed";
+    }
+
     await payment.save();
+    console.log(
+      `✅ Payment ${payment.reference} updated to ${payment.status}.`
+    );
 
-    return { message: "Payment successful via Ligdicash", payment, order };
+    return { payment };
+  } catch (err) {
+    console.error("❌ verifyAndCompleteLigdicashPayment error:", err.message);
+    throw err;
   }
-
-  // ❌ Failed / cancelled
-  if (["canceled", "cancelled", "failed", "expired"].includes(normalized)) {
-    payment.status = "failed";
-    payment.gatewayResponse = confirmed;
-    await payment.save();
-    throw new Error(`Payment ${normalized}`);
-  }
-
-  // ⏳ Pending
-  return { message: "Payment still pending", payment, ligdicash: confirmed };
 };

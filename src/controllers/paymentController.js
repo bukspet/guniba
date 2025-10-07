@@ -114,12 +114,24 @@ exports.verifyLigdicash = async (req, res) => {
       return res.status(400).json({ error: "Payment reference is required" });
     }
 
-    const result = await paymentService.verifyAndCompleteLigdicashPayment(ref);
+    // ✅ Fetch the payment record that the callback already updated
+    const payment = await Payment.findOne({
+      $or: [{ reference: ref }, { gatewayReference: ref }],
+    });
 
-    return res.status(200).json(result);
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found" });
+    }
+
+    // ✅ Return latest status (already updated by callback)
+    return res.status(200).json({
+      success: true,
+      message: "Payment retrieved successfully.",
+      payment,
+    });
   } catch (err) {
     console.error("Verify Ligdicash Error:", err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: "Internal server error." });
   }
 };
 
@@ -128,14 +140,14 @@ exports.ligdicashCallback = async (req, res) => {
   try {
     const body = req.body;
 
-    // Extract token (main transaction token)
+    // ✅ Extract token
     const token =
       body?.token ||
       body?.invoice?.token ||
       body?.external_id ||
       body?.commande?.invoice?.external_id;
 
-    // Extract custom_data if it's an array
+    // ✅ Extract order_id from custom_data (array)
     let orderId = null;
     if (Array.isArray(body?.custom_data)) {
       const orderData = body.custom_data.find(
@@ -144,15 +156,13 @@ exports.ligdicashCallback = async (req, res) => {
       if (orderData) orderId = orderData.valueof_customdata;
     }
 
-    // Fallback if token is not found
     const transactionToken = token || orderId;
-
     if (!transactionToken) {
-      console.warn("Ligdicash callback missing token/order_id:", body);
+      console.warn("⚠️ Ligdicash callback missing token/order_id:", body);
       return res.status(200).json({ received: true });
     }
 
-    // Extract useful info for logging/debugging
+    // ✅ Extract main fields for debugging
     const { response_code, status, operator_name, transaction_id, montant } =
       body;
 
@@ -165,13 +175,44 @@ exports.ligdicashCallback = async (req, res) => {
       montant,
     });
 
-    // Process payment verification / completion
-    await paymentService.verifyAndCompleteLigdicashPayment(transactionToken);
+    // ✅ Make sure callback actually came from Ligdicash (optional but recommended)
+    // if (body.hash && !isValidHash(body)) {
+    //   console.warn("❌ Invalid hash in callback");
+    //   return res.status(403).json({ success: false, message: "Invalid signature" });
+    // }
 
-    return res.status(200).json({ received: true });
+    // ✅ Prevent duplicate processing (idempotency)
+    const existingPayment = await Payment.findOne({
+      $or: [
+        { gatewayReference: transactionToken },
+        { reference: transactionToken },
+      ],
+    });
+
+    if (
+      existingPayment &&
+      ["successful", "failed"].includes(existingPayment.status)
+    ) {
+      console.log("ℹ️ Payment already processed:", existingPayment.status);
+      return res.status(200).json({ received: true });
+    }
+
+    // ✅ Process payment verification (only for callback)
+    const result = await paymentService.verifyAndCompleteLigdicashPayment(
+      transactionToken
+    );
+
+    console.log("💰 Payment verified and updated:", result?.payment?.status);
+
+    return res.status(200).json({
+      success: true,
+      message: "Callback processed successfully",
+      payment: result?.payment || result,
+    });
   } catch (err) {
-    console.error("❌ Ligdicash Callback Error:", err);
-    return res.status(200).json({ received: true }); // Always 200 to avoid repeated retries
+    console.error("❌ Ligdicash Callback Error:", err.message || err);
+    // Always return 200 so Ligdicash doesn’t retry infinitely
+    return res.status(200).json({ received: true });
   }
 };
 

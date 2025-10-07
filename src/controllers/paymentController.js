@@ -1,4 +1,5 @@
 // controllers/paymentController.js
+const Payment = require("../models/Payment");
 const ShippingAddress = require("../models/ShippingAddress");
 const paymentService = require("../services/paymentService");
 

@@ -592,7 +592,7 @@ exports.verifyAndCompleteLigdicashPayment = async (tokenOrRef) => {
       `✅ Payment ${payment.reference} updated to ${payment.status}.`
     );
 
-    return { message: "Payment successful via Ligdicash", payment, order };
+    return { message: "Payment successful via Ligdicash", payment };
   } catch (err) {
     console.error("❌ verifyAndCompleteLigdicashPayment error:", err.message);
     throw err;

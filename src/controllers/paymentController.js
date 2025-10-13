@@ -141,6 +141,8 @@ exports.ligdicashCallback = async (req, res) => {
   try {
     const body = req.body;
 
+    console.log("Ligdicash Callback body:", body);
+
     // ✅ Extract token
     const token =
       body?.token ||

@@ -561,7 +561,17 @@ exports.verifyAndCompleteLigdicashPayment = async (tokenOrRef) => {
 
     const { response_code, status } = ligdiResp;
 
+    // const normalized = String(status).toLowerCase();
+
     if (response_code === "00" && status === "completed") {
+      const items = payment.items.map((it) => ({
+        variantId: new mongoose.Types.ObjectId(
+          typeof it.id === "object" ? it.id._id : it.id
+        ),
+        quantity: it.quantity,
+        price: it.price,
+      }));
+
       const order = await createOrder(
         payment.user,
         items,
@@ -582,7 +592,7 @@ exports.verifyAndCompleteLigdicashPayment = async (tokenOrRef) => {
       `✅ Payment ${payment.reference} updated to ${payment.status}.`
     );
 
-    return { payment };
+    return { message: "Payment successful via Ligdicash", payment, order };
   } catch (err) {
     console.error("❌ verifyAndCompleteLigdicashPayment error:", err.message);
     throw err;

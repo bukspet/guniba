@@ -562,6 +562,14 @@ exports.verifyAndCompleteLigdicashPayment = async (tokenOrRef) => {
     const { response_code, status } = ligdiResp;
 
     if (response_code === "00" && status === "completed") {
+      const order = await createOrder(
+        payment.user,
+        items,
+        payment.amount,
+        payment.method,
+        payment.shippingAddress
+      );
+      payment.order = order._id;
       payment.status = "successful";
     } else if (status === "pending") {
       payment.status = "pending";

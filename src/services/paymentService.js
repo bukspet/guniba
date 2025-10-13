@@ -432,7 +432,7 @@ exports.initiateLigdicashPayment = async (
 
   // Compute totals
   const subtotal = items.reduce(
-    (s, i) => s + Number(i.price * 600) * Number(i.quantity),
+    (s, i) => s + Number(i.price) * Number(i.quantity),
     0
   );
   const totalWithTax = Math.round(subtotal * 1.1);

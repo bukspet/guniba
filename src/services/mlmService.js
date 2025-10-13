@@ -4,41 +4,34 @@ const Order = require("../models/Order.js");
 
 class MLMService {
   async calculateCommission(userId, purchaseAmount, orderId) {
-    console.log(purchaseAmount, "amount");
     const user = await User.findById(userId);
     if (!user) return;
-    // Update user sales and level
+
+    // 1️⃣ Update the buyer’s total sales and level
     const sales = Number(purchaseAmount) || 0;
     user.totalSales += sales;
     user.level = this.determineLevel(user.totalSales);
     await user.save();
 
+    // 2️⃣ Traverse the referral chain
     let referrerId = user.referredBy;
     let generation = 1;
 
-    while (referrerId && generation <= 7) {
+    while (referrerId && generation <= 3) {
       const referrer = await User.findById(referrerId);
       if (!referrer) break;
 
-      let commission = 0;
+      const commission = await this.calculateBonusForReferrer(
+        referrer,
+        purchaseAmount,
+        generation
+      );
 
-      if (generation === 1 && purchaseAmount >= 50) {
-        commission = purchaseAmount * 0.05;
-      } else {
-        const totalSales = await this.getTotalSales(referrer._id);
-        if (this.qualifiesForGenerationBonus(generation, totalSales)) {
-          const generationRate = [0, 0.05, 0.04, 0.03, 0.02, 0.01, 0.01];
-          commission = purchaseAmount * generationRate[generation];
-        }
-      }
-
-      // Update referrer earnings
       if (commission > 0) {
         referrer.commissionEarned += commission;
         referrer.commissionBalance += commission;
         await referrer.save();
 
-        // Save commission record
         await Commission.create({
           recipient: referrer._id,
           fromUser: userId,
@@ -48,35 +41,43 @@ class MLMService {
         });
       }
 
-      // Move up the tree
       referrerId = referrer.referredBy;
       generation++;
     }
   }
 
-  determineLevel(sales) {
-    if (sales >= 10000) return 3;
-    if (sales >= 5000) return 2;
+  /**
+   * Determine user level based on total sales
+   */
+  determineLevel(totalSales) {
+    if (totalSales >= 50000) return 3;
+    if (totalSales >= 5000) return 2;
+    if (totalSales >= 25) return 1;
     return 1;
   }
 
-  async getTotalSales(userId) {
-    const user = await User.findById(userId);
-    if (!user) return 0;
+  /**
+   * Calculate referral commission based on generation and referrer level
+   */
+  async calculateBonusForReferrer(referrer, purchaseAmount, generation) {
+    const totalSales = referrer.totalSales || 0;
+    const level = this.determineLevel(totalSales);
 
-    let totalSales = user.totalSales;
-    const downlines = await User.find({ referredBy: userId });
+    // Define bonus structures per level
+    const bonusRates = {
+      1: { minSales: 25, rates: [0.05] }, // Only 1st generation
+      2: { minSales: 5000, rates: [0.05, 0.03] }, // 1st and 2nd
+      3: { minSales: 50000, rates: [0.05, 0.03, 0.02] }, // 1st, 2nd, 3rd
+    };
 
-    for (let downline of downlines) {
-      totalSales += await this.getTotalSales(downline._id);
-    }
+    const currentLevel = bonusRates[level];
 
-    return totalSales;
-  }
+    // Check eligibility
+    if (totalSales < currentLevel.minSales) return 0;
 
-  qualifiesForGenerationBonus(generation, totalSales) {
-    const salesRequirements = [0, 0, 6000, 7000, 8000, 9000, 10000];
-    return generation === 7 || totalSales >= salesRequirements[generation];
+    // Check if generation qualifies
+    const rate = currentLevel.rates[generation - 1];
+    return rate ? purchaseAmount * rate : 0;
   }
 }
 

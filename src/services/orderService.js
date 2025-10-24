@@ -224,7 +224,19 @@ exports.confirmOrderReceived = async (orderId) => {
 
 exports.getAllOrders = async (filter = {}) => {
   return await Order.find(filter)
-    .populate("user items.variantId")
+    .populate("user", "fullName email phone level avatar")
+    .populate("shippingAddress")
+    .populate({
+      path: "items.variantId",
+      populate: {
+        path: "productId",
+        select: "name images variantTypes",
+        populate: {
+          path: "variantTypes",
+          select: "_id name",
+        },
+      },
+    })
     .sort({ createdAt: -1 });
 };
 
